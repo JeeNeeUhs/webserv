@@ -1,7 +1,7 @@
-NAME        = a.out
+NAME        = webserv
 CXX         = c++
 CXXFLAGS    = -Wall -Wextra -Werror -std=c++98
-SRCS        = $(wildcard *.cpp)
+SRCS        = $(wildcard *.cpp) #FIXME
 OBJS        = $(addprefix $(BUILD), $(SRCS:.cpp=.o))
 RM          = rm -rf
 BUILD       = build/
