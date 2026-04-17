@@ -15,7 +15,6 @@ class Location {
 		std::string root;
 		std::string index;
 		bool autoindex;
-		std::string cgi_path;
 		
 		int redirect_code = -1;
 		std::string redirect_path;
