@@ -7,6 +7,9 @@
 
 class Server {
 	private:
+		int sockFd;
+		std::vector<struct pollfd> pollFds;
+
 		std::string host;
 		int port;
 		size_t client_max_body_size;
