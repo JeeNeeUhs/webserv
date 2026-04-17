@@ -12,7 +12,6 @@ Location& Location::operator=(const Location& other) {
 		root = other.root;
 		index = other.index;
 		autoindex = other.autoindex;
-		cgi_path = other.cgi_path;
 		redirect_code = other.redirect_code;
 		redirect_path = other.redirect_path;
 		upload_store = other.upload_store;
