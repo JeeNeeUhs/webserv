@@ -7,6 +7,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <cerrno>
 
 /*
 struct pollfd {
@@ -15,6 +16,17 @@ struct pollfd {
 	short	revents;
 };
 */
+
+void setNonBlocking(int fd) {
+	// flag'leri okumaca
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (flags == -1)
+		throw std::runtime_error("fcntl getflag failed");
+
+	// flag'leri OR'layarak setlemece
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		throw std::runtime_error("fcntl setflag failed.");
+}
 
 class Server {
 	private:
@@ -38,7 +50,7 @@ Server::Server(int port) {
 	if (this->_sockFd < 0)
 		throw std::runtime_error("socket failed");
 
-	// TODO: set non-block
+	setNonBlocking(this->_sockFd);
 
 	// os belirtilen port ve adres kullanimdaysa hemen serbest birakmadigi
 	// icin (TIME_WAIT state) reuse ile zorluyoruz. eger reuse olmasaydi ve
@@ -76,11 +88,11 @@ Server::Server(int port) {
 void Server::runEventLoop() {
 	while (true) {
 		// -1 yeni event'e kadar process'i sleep mode'a aliyor.
-		printf("blocklancam.\n");
+		std::cout << "ben poll, bloklanıyorum." << std::endl;
 
 		int ready_count = poll(&_pollFds[0], _pollFds.size(), -1);
 
-		printf("tetiklendiiiim.\n");
+		std::cout << "tetiklendiiiim" << std::endl;
 
 		if (ready_count < 0) // hata durumu
 			break;
@@ -93,7 +105,12 @@ void Server::runEventLoop() {
 				continue;
 
 			// hata durumunda fd'yi kapatip listeden ucur
+			// POLLHUP: baglanti hangup durumu, tcp FIN paketi geldi
+			// POLLERR: socket uzerinde kritik hata sekli 
+			// POLLNVAL: fd gecersiz oldugu durumlar
 			if (_pollFds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+				std::cout << "disconnect " << std::endl;
+
 				close(_pollFds[i].fd);
 				_pollFds.erase(_pollFds.begin() + i);
 
@@ -114,12 +131,73 @@ void Server::runEventLoop() {
 	}
 }
 
+// server'in accept queue'da bekleyen her connection'i kabul
+// etmesi icin kurulan donguyu iceren fonksiyon
 void Server::handleConnection() {
-	
+	while (true) {
+		struct sockaddr_in client_addr;
+		socklen_t client_len = sizeof(client_addr);
+
+		// burasi non-blocking olmayan durumda yeni connection gelene
+		// kadar blocklanacakti, fakat sockfd non-block setlendigi icin
+		// accept cagrisi queue'da baglanti olmadigi durumda hata donup
+		// (errno setleyip) blocking durumdan cikmamizi sagliyor.
+		int clientFd = accept(_sockFd, (struct sockaddr*)&client_addr, &client_len);
+		if (clientFd < 0) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				break; 
+			else {
+				// burasi gercek hata durumlari, nonblocking ile alakali
+				// olmayan durumlar
+				std::cerr << "accept failed" << std::endl;
+				break;
+			}
+		}
+
+		std::cout << "new connection! fd: " << clientFd << std::endl;
+
+		setNonBlocking(clientFd);
+		struct pollfd pfd;
+		pfd.fd = clientFd;
+		pfd.events = POLLIN; // fd'ye http bodyleri input olarak gelecek
+		pfd.revents = 0;
+		_pollFds.push_back(pfd);
+	}
 }
 
-void Server::handleClient(size_t i) {
+// client'in gonderdigi veriyi okuyacak fonksiyon
+// index: client'in pollfd indexi
+void Server::handleClient(size_t index) {
+	int client_fd = _pollFds[index].fd;
+	char buffer[1024];
 
+	while (true) {
+		std::memset(buffer, 0, sizeof(buffer));
+
+		int bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+		if (bytes_read > 0)
+			std::cout << "gelen veri bu:\n" << buffer << std::endl;
+		else if (bytes_read == 0) {
+			// 0 ise zaten okunacak veri olmadigi icin connection'i
+			// kapatma hazirliklari
+			close(client_fd);
+			_pollFds.erase(_pollFds.begin() + index);
+			break;
+		} else {
+			// client socket non-blocking state'te oldugundan dolayi
+			// blocking yerine -1 donup errno setliyor ki kod akisi
+			// devam etsin
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				break;
+			else {
+				// gercek bir hatanin olustugu durum
+				std::cerr << "recv failed fd: " << client_fd << std::endl;
+				close(client_fd);
+				_pollFds.erase(_pollFds.begin() + index);
+				break;
+			}
+		}
+	}
 }
 
 Server::~Server() {
