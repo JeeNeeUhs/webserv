@@ -1,5 +1,5 @@
-#ifndef HTTPREQUESTBODY_HPP
-# define HTTPREQUESTBODY_HPP
+#ifndef HTTPREQUEST_HPP
+# define HTTPREQUEST_HPP
 
 # include <string>
 # include <map>
@@ -23,29 +23,7 @@ Authorization: Basic ZW1pcmhhbjpwYXNzd29yZA==
 bodydeneme
 */
 
-/*
-Response:
-
-HTTP/1.0 500 abc def
-Date: Sun, 05 Apr 2026 12:00:00 GMT
-Server: webserv/1.0
-Content-Type: text/html; charset=UTF-8
-Content-Length: 348
-Content-Language: tr
-Content-Encoding: gzip
-Last-Modified: Sat, 04 Apr 2026 18:30:00 GMT
-Expires: Mon, 06 Apr 2026 12:00:00 GMT
-Cache-Control: public, max-age=86400
-Pragma: no-cache
-Vary: Accept-Encoding, Accept-Language
-Location: /redirected-page
-Allow: GET, POST, HEAD
-Connection: close
-
-<html>default error page</html>
-*/
-
-class HTTPRequestBody {
+class HTTPRequest {
 	private:
 		std::string method;
 		std::string path;
@@ -57,10 +35,10 @@ class HTTPRequestBody {
 		std::string body;
 
 	public:
-		HTTPRequestBody();
-		HTTPRequestBody(const HTTPRequestBody& other);
-		HTTPRequestBody& operator=(const HTTPRequestBody& other);
-		~HTTPRequestBody();
+		HTTPRequest();
+		HTTPRequest(const HTTPRequest& other);
+		HTTPRequest& operator=(const HTTPRequest& other);
+		~HTTPRequest();
 
 		std::string getMethod() const;
 		std::string getPath() const;

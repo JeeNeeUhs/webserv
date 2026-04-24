@@ -11,4 +11,4 @@
 ## refactor
 [ ] Delete wildcard in Makefile and add source files manually
 [ ] Change private attributes to start with an underscore
-
+[ ] Improve error messages
