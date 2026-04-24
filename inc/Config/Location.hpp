@@ -9,6 +9,11 @@ typedef struct s_error_page {
 	std::string path;
 } t_error_page;
 
+typedef enum e_parent_type {
+	SERVER,
+	LOCATION
+} t_parent_type;
+
 class Location {
 	private:
 		std::string path;
@@ -23,6 +28,10 @@ class Location {
 		std::vector<std::string> cgi_extensions;
 		std::vector<t_error_page> error_pages;
 		std::vector<std::string> methods;
+
+		std::vector<Location> locations;
+		t_parent_type parent_type;
+		void* parent;
 
 	public:
 		Location();
