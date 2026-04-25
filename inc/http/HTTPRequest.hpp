@@ -30,6 +30,7 @@ class HTTPRequest {
 		std::string protocol;
 		std::string version;
 		
+		std::map<std::string, std::string> queries;
 		std::map<std::string, std::string> headers;
 
 		std::string body;
