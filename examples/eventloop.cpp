@@ -113,6 +113,8 @@ class Webserv {
 				if (clientFd < 0) {
 					if (errno == EAGAIN || errno == EWOULDBLOCK)
 						break;
+					// TODO: buradaki fd limit dolu oldugunda poll surekli
+					// calisip cpu kullanimini arttirabilir
 					if (errno == EMFILE || errno == ENFILE) {
 						std::cerr << "reached max fd limit" << std::endl;
 						break;
@@ -154,7 +156,6 @@ class Webserv {
 
 			// read loop
 			while (true) {
-				std::memset(reqChunk, 0, sizeof(reqChunk));
 				int bytes = recv(pfd.fd, reqChunk, sizeof(reqChunk) - 1, 0);
 				
 				if (bytes > 0) {
