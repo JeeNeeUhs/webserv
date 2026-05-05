@@ -1,4 +1,5 @@
 #include "Location.hpp"
+#include "Server.hpp"
 
 Location::Location() : redirect_code(-1) {}
 
@@ -64,15 +65,7 @@ std::vector<std::string> Location::getMethods() const {
 	return methods;
 }
 
-std::vector<Location>& Location::getLocations() {
-	return locations;
-}
-
-t_parent_type Location::getParentType() const {
-	return parent_type;
-}
-
-void* Location::getParent() const {
+Server *Location::getParent() const {
 	return parent;
 }
 

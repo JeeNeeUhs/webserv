@@ -24,6 +24,8 @@ class Location {
 		std::vector<t_error_page> error_pages;
 		std::vector<std::string> methods;
 
+		Server* parent;
+
 	public:
 		Location();
 		Location(const Location& other);
@@ -41,6 +43,7 @@ class Location {
 		std::vector<t_error_page> getErrorPages() const;
 		std::vector<std::string> getMethods() const;
 		std::vector<Location>& getLocations();
+		Server *getParent() const;
 		
 		void fill(); // test purposes
 
