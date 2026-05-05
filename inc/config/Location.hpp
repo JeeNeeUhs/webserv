@@ -9,11 +9,6 @@ typedef struct s_error_page {
 	std::string path;
 } t_error_page;
 
-typedef enum e_parent_type {
-	SERVER,
-	LOCATION
-} t_parent_type;
-
 class Location {
 	private:
 		std::string path;
@@ -21,7 +16,7 @@ class Location {
 		std::string index;
 		bool autoindex;
 		
-		int redirect_code = -1;
+		int redirect_code;
 		std::string redirect_path;
 		std::string upload_store;
 
@@ -29,15 +24,25 @@ class Location {
 		std::vector<t_error_page> error_pages;
 		std::vector<std::string> methods;
 
-		std::vector<Location> locations;
-		t_parent_type parent_type;
-		void* parent;
-
 	public:
 		Location();
 		Location(const Location& other);
 		Location& operator=(const Location& other);
 		~Location();
+
+		std::string getPath() const;
+		std::string getRoot() const;
+		std::string getIndex() const;
+		bool getAutoindex() const;
+		int getRedirectCode() const;
+		std::string getRedirectPath() const;
+		std::string getUploadStore() const;
+		std::vector<std::string> getCgiExtensions() const;
+		std::vector<t_error_page> getErrorPages() const;
+		std::vector<std::string> getMethods() const;
+		std::vector<Location>& getLocations();
+		
+		void fill(); // test purposes
 
 };
 
