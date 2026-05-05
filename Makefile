@@ -2,10 +2,10 @@ NAME		= webserv
 
 BUILD_DIR	= build
 
-VPATH		= src:src/config
-SRCS		= main.cpp
+VPATH		= src:src/config:src/logger
+SRCS		= main.cpp Config.cpp Logger.cpp Server.cpp Location.cpp
 OBJS		= $(addprefix $(BUILD_DIR)/,$(SRCS:.cpp=.o))
-INCS		= -Iinc -Iinc/config
+INCS		= -Iinc -Iinc/config -Iinc/logger
 
 CXX			= c++
 CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 $(INCS)
