@@ -1,15 +1,14 @@
 NAME		= webserv
 
-INC_DIR		= inc
-SRC_DIR		= src
 BUILD_DIR	= build
 
 VPATH		= src:src/config
 SRCS		= main.cpp
 OBJS		= $(addprefix $(BUILD_DIR)/,$(SRCS:.cpp=.o))
+INCS		= -Iinc -Iinc/config
 
 CXX			= c++
-CXXFLAGS	= -Wall -Wextra -Werror -std=c++98
+CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 $(INCS)
 RM			= rm -rf
 
 all: $(NAME)
