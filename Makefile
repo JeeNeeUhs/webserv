@@ -1,24 +1,30 @@
-NAME        = webserv
-CXX         = c++
-CXXFLAGS    = -Wall -Wextra -Werror -std=c++98
-SRCS        = $(wildcard *.cpp) #FIXME
-OBJS        = $(addprefix $(BUILD), $(SRCS:.cpp=.o))
-RM          = rm -rf
-BUILD       = build/
+NAME		= webserv
 
-all: $(BUILD) $(NAME)
+INC_DIR		= inc
+SRC_DIR		= src
+BUILD_DIR	= build
 
-$(BUILD):
-	@mkdir -p $(BUILD)
+VPATH		= src:src/config
+SRCS		= main.cpp
+OBJS		= $(addprefix $(BUILD_DIR)/,$(SRCS:.cpp=.o))
+
+CXX			= c++
+CXXFLAGS	= -Wall -Wextra -Werror -std=c++98
+RM			= rm -rf
+
+all: $(NAME)
+
+$(BUILD_DIR):
+	mkdir -p $@
+
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 $(NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJS)
-
-$(BUILD)%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
 clean:
-	$(RM) $(BUILD)
+	$(RM) $(BUILD_DIR)
 
 fclean: clean
 	$(RM) $(NAME)
