@@ -21,3 +21,51 @@ Server& Server::operator=(const Server& other) {
 }
 
 Server::~Server() {}
+
+int Server::getSockFd() const {
+	return sockFd;
+}
+
+std::string Server::getHost() const {
+	return host;
+}
+
+int Server::getPort() const {
+	return port;
+}
+
+size_t Server::getClientMaxBodySize() const {
+	return client_max_body_size;
+}
+
+std::string Server::getRoot() const {
+	return root;
+}
+
+std::string Server::getIndex() const {
+	return index;
+}
+
+bool Server::getAutoindex() const {
+	return autoindex;
+}
+
+std::vector<std::string> Server::getCgiExtensions() const {
+	return cgi_extensions;
+}
+
+std::vector<t_error_page> Server::getErrorPages() const {
+	return error_pages;
+}
+
+std::vector<std::string> Server::getMethods() const {
+	return methods;
+}
+
+std::vector<Location>& Server::getLocations() {
+	return locations;
+}
+
+void Server::fill() {
+	
+}

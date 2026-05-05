@@ -27,6 +27,20 @@ class Server {
 		Server& operator=(const Server& other);
 		~Server();
 
+		int getSockFd() const;
+		std::string getHost() const;
+		int getPort() const;
+		size_t getClientMaxBodySize() const;
+		std::string getRoot() const;
+		std::string getIndex() const;
+		bool getAutoindex() const;
+		std::vector<std::string> getCgiExtensions() const;
+		std::vector<t_error_page> getErrorPages() const;
+		std::vector<std::string> getMethods() const;
+		std::vector<Location>& getLocations();
+
+		void fill(); // test purposes
+
 };
 
 #endif
