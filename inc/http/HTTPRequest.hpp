@@ -45,10 +45,11 @@ class HTTPRequest {
 		std::string getPath() const;
 		std::string getProtocol() const;
 		std::string getVersion() const;
-
+		std::map<std::string, std::string> getQueries() const;
 		std::map<std::string, std::string> getHeaders() const;
-		
 		std::string getBody() const;
+
+		void fill(); // test purposes
 
 		bool validate();
 		bool parse(const std::string& rawRequest);

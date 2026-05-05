@@ -32,12 +32,20 @@ std::string HTTPRequest::getVersion() const {
 	return version;
 }
 
+std::map<std::string, std::string> HTTPRequest::getQueries() const {
+	return queries;
+}
+
 std::map<std::string, std::string> HTTPRequest::getHeaders() const {
 	return headers;
 }
 
 std::string HTTPRequest::getBody() const {
 	return body;
+}
+
+void fill() {
+	
 }
 
 bool HTTPRequest::validate() {
