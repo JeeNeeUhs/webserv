@@ -16,6 +16,10 @@ class Config {
 		Config& operator=(const Config& other);
 		~Config();
 
+		std::vector<Server>& getServers();
+
+		void fill(); // test purposes
+
 };
 
 #endif

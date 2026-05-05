@@ -14,3 +14,11 @@ Config& Config::operator=(const Config& other) {
 }
 
 Config::~Config() {}
+
+std::vector<Server>& Config::getServers() {
+	return servers;
+}
+
+void Config::fill() {
+	
+}
