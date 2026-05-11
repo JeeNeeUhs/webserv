@@ -2,6 +2,7 @@
 # define CGI_HPP
 
 # include "HTTPRequest.hpp"
+# include "HTTPResponse.hpp"
 # include "Location.hpp"
 # include <string>
 
