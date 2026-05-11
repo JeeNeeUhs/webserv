@@ -44,8 +44,22 @@ std::string HTTPRequest::getBody() const {
 	return body;
 }
 
-void fill() {
-	
+void HTTPRequest::fill1() {
+	method = "GET";
+	path = "/test";
+	protocol = "HTTP";
+	version = "1.1";
+	queries["name"] = "value";
+	headers["Content-Type"] = "text/html";
+}
+
+void HTTPRequest::fill2() {
+	method = "GET";
+	path = "/cgi-index";
+	protocol = "HTTP";
+	version = "1.1";
+	queries["name"] = "value";
+	headers["Content-Type"] = "text/html";
 }
 
 bool HTTPRequest::validate() {

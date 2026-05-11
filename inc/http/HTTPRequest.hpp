@@ -49,7 +49,8 @@ class HTTPRequest {
 		std::map<std::string, std::string> getHeaders() const;
 		std::string getBody() const;
 
-		void fill(); // test purposes
+		void fill1(); // test purposes
+		void fill2(); // test purposes
 
 		bool validate();
 		bool parse(const std::string& rawRequest);

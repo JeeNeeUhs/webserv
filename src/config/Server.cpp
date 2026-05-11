@@ -67,5 +67,18 @@ std::vector<Location>& Server::getLocations() {
 }
 
 void Server::fill() {
-	
+	host = "0.0.0.0";
+	port = 8080;
+	client_max_body_size = 1024 * 1024;
+	root = "/Users/nothing/cowd";
+	index = "index.html";
+	autoindex = false;
+	cgi_extensions.push_back(".py");
+	methods.push_back("GET");
+	Location loc1;
+	Location loc2;
+	loc1.fill(this);
+	loc2.fill2(this);
+	locations.push_back(loc1);
+	locations.push_back(loc2);
 }

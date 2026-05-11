@@ -69,6 +69,24 @@ Server *Location::getParent() const {
 	return parent;
 }
 
-void Location::fill() {
+void Location::fill(Server* parent) {
+	path = "/test";
+	root = "/Users/nothing/cowd/test";
+	index = "script.py";
+	autoindex = false;
+	upload_store = "/var/www/uploads";
+	cgi_extensions.push_back(".py");
+	methods.push_back("GET");
+	this->parent = parent;
+}
 
+void Location::fill2(Server* parent) {
+	path = "/cgi-index";
+	root = "/Users/nothing/cowd/test";
+	index = "index.py";
+	autoindex = false;
+	upload_store = "/var/www/uploads";
+	cgi_extensions.push_back(".py");
+	methods.push_back("GET");
+	this->parent = parent;
 }

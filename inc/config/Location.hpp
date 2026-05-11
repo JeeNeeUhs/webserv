@@ -4,6 +4,8 @@
 # include <string>
 # include <vector>
 
+class Server;
+
 typedef struct s_error_page {
 	int code;
 	std::string path;
@@ -45,7 +47,8 @@ class Location {
 		std::vector<Location>& getLocations();
 		Server *getParent() const;
 		
-		void fill(); // test purposes
+		void fill(Server* parent); // test purposes
+		void fill2(Server* parent); // test purposes
 
 };
 
