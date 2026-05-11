@@ -1,6 +1,4 @@
 #include "cgi.hpp"
-#include "Config.hpp"
-#include "HTTPRequest.hpp"
 
 #include <string>
 #include <map>

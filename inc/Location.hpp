@@ -3,13 +3,9 @@
 
 # include <string>
 # include <vector>
+# include <map>
 
 class Server;
-
-typedef struct s_error_page {
-	int code;
-	std::string path;
-} t_error_page;
 
 class Location {
 	private:
@@ -23,7 +19,7 @@ class Location {
 		std::string upload_store;
 
 		std::vector<std::string> cgi_extensions;
-		std::vector<t_error_page> error_pages;
+		std::map<int, std::string> error_pages;
 		std::vector<std::string> methods;
 
 		Server* parent;
@@ -34,22 +30,13 @@ class Location {
 		Location& operator=(const Location& other);
 		~Location();
 
-		std::string getPath() const;
-		std::string getRoot() const;
-		std::string getIndex() const;
-		bool getAutoindex() const;
-		int getRedirectCode() const;
-		std::string getRedirectPath() const;
-		std::string getUploadStore() const;
-		std::vector<std::string> getCgiExtensions() const;
-		std::vector<t_error_page> getErrorPages() const;
-		std::vector<std::string> getMethods() const;
-		std::vector<Location>& getLocations();
-		Server *getParent() const;
-		
+		const std::string& getPath() const;
+		const std::string& getRoot() const;
+		const std::string& getIndex() const;
+		Server* getParent() const;
+
 		void fill(Server* parent); // test purposes
 		void fill2(Server* parent); // test purposes
-
 };
 
 #endif

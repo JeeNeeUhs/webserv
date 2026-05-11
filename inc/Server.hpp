@@ -1,23 +1,23 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+# include "Location.hpp"
 # include <string>
 # include <vector>
-# include "Location.hpp"
+# include <map>
 
 class Server {
 	private:
 		int sockFd;
+		std::vector<std::pair<std::string, int> > listens;
 
-		std::string host;
-		int port;
 		size_t client_max_body_size;
 		std::string root;
 		std::string index;
 		bool autoindex;
 
 		std::vector<std::string> cgi_extensions;
-		std::vector<t_error_page> error_pages;
+		std::map<int, std::string> error_pages;
 		std::vector<std::string> methods;
 		std::vector<Location> locations;
 
@@ -28,19 +28,12 @@ class Server {
 		~Server();
 
 		int getSockFd() const;
-		std::string getHost() const;
-		int getPort() const;
-		size_t getClientMaxBodySize() const;
-		std::string getRoot() const;
-		std::string getIndex() const;
-		bool getAutoindex() const;
-		std::vector<std::string> getCgiExtensions() const;
-		std::vector<t_error_page> getErrorPages() const;
-		std::vector<std::string> getMethods() const;
+		const std::vector<std::pair<std::string, int> >& getListens() const;
+		const std::string& getRoot() const;
+		const std::string& getIndex() const;
 		std::vector<Location>& getLocations();
 
 		void fill(); // test purposes
-
 };
 
 #endif

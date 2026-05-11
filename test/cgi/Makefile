@@ -1,14 +1,12 @@
 NAME        = webserv
 CXX         = c++
-CXXFLAGS    = -std=c++98 -I../../inc/config -I../../inc/ -I../../inc/http
-SRCS        = utils.cpp \
-			  Config.cpp \
-			  Location.cpp \
+CXXFLAGS    = -std=c++98 -I../../inc/
+SRCS        = Location.cpp \
 			  Server.cpp \
 			  cgi.cpp \
 			  HTTPRequest.cpp \
 			  main.cpp
-VPATH		= ../../src:../../src/config:../../src/http
+VPATH		= ../../src
 OBJS        = $(addprefix $(BUILD), $(SRCS:.cpp=.o))
 RM          = rm -rf
 BUILD       = build/
