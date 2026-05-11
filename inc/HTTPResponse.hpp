@@ -26,6 +26,28 @@ Connection: close
 <html>default error page</html>
 */
 
-class HTTPResponse {};
+class HTTPResponse {
+	private:
+		std::string _version;
+		int _statusCode;
+		std::string _reasonPhrase;
+		std::map<std::string, std::string> _headers;
+		std::string _body;
+
+	public:
+		HTTPResponse();
+		HTTPResponse(int statusCode, const std::string& reasonPhrase);
+		HTTPResponse(int statusCode, const std::string& reasonPhrase, const std::map<std::string, std::string>& headers, const std::string& body);
+		HTTPResponse(const HTTPResponse& other);
+		HTTPResponse& operator=(const HTTPResponse& other);
+		~HTTPResponse();
+
+		void setStatusCode(int statusCode);
+		void setReasonPhrase(const std::string& reasonPhrase);
+		void addHeader(const std::string& key, const std::string& value);
+		void setBody(const std::string& body);
+
+		const std::string toString() const;
+};
 
 #endif
