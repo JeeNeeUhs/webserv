@@ -5,6 +5,7 @@
 #include <vector>
 #include <unistd.h>
 #include <iostream>
+#include "HTTPResponse.hpp"
 
 // template<typename T>
 // int checkCgiExtentions(const T& data, const std::string& path) {
@@ -84,7 +85,7 @@ std::string executeCgi(const std::string& filePath, const std::map<std::string, 
 	}
 }
 
-std::string cgiRun(const Location& data, HTTPRequest& request) {
+void cgiRun(const Location& data, const HTTPRequest& request, HTTPResponse& response) {
 	std::string filepath;
 	std::map<std::string, std::string> env;
 
@@ -98,5 +99,8 @@ std::string cgiRun(const Location& data, HTTPRequest& request) {
 
 	env = buildEnv(*data.getParent(), request, filepath);
 
-	return executeCgi(filepath, env);
+	std::string cgiOutput;
+	cgiOutput = executeCgi(filepath, env);
+	//parse cgiOutput to set response body and headers
+	
 }

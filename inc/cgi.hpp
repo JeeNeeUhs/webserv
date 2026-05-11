@@ -5,6 +5,6 @@
 # include "Location.hpp"
 # include <string>
 
-std::string cgiRun(const Location& data, HTTPRequest& request);
+void cgiRun(const Location& data, const HTTPRequest& request, HTTPResponse& response);
 
 #endif
