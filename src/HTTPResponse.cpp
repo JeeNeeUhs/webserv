@@ -1,50 +1,166 @@
-#include "HTTPResponse.hpp"
-#include "webserv.hpp"
+#include "HTTPRequest.hpp"
+#include <cstdlib>
+#include <cctype>
 
-HTTPResponse::HTTPResponse() : _version(HTTP_PROTOCOL) {}
+HTTPRequest::HTTPRequest() {}
 
-HTTPResponse::HTTPResponse(int statusCode, const std::string& reasonPhrase)
-	: _version(HTTP_PROTOCOL), _statusCode(statusCode), _reasonPhrase(reasonPhrase) {}
+HTTPRequest::HTTPRequest(const HTTPRequest& other) {
+	operator=(other);
+}
 
-HTTPResponse::HTTPResponse(int statusCode, const std::string& reasonPhrase, const std::map<std::string, std::string>& headers, const std::string& body)
-	: _version(HTTP_PROTOCOL), _statusCode(statusCode), _reasonPhrase(reasonPhrase), _headers(headers), _body(body) {}
-
-HTTPResponse::HTTPResponse(const HTTPResponse& other)
-	: _version(HTTP_PROTOCOL), _statusCode(other._statusCode), _reasonPhrase(other._reasonPhrase), _headers(other._headers), _body(other._body) {}
-
-HTTPResponse& HTTPResponse::operator=(const HTTPResponse& other) {
+HTTPRequest& HTTPRequest::operator=(const HTTPRequest& other) {
 	if (this != &other) {
-		_statusCode = other._statusCode;
-		_reasonPhrase = other._reasonPhrase;
+		_method = other._method;
+		_path = other._path;
+		_protocol = other._protocol;
+		_version = other._version;
+		_queries = other._queries;
 		_headers = other._headers;
 		_body = other._body;
 	}
 	return *this;
 }
 
-HTTPResponse::~HTTPResponse() {}
+HTTPRequest::~HTTPRequest() {}
 
-void HTTPResponse::setStatusCode(int statusCode) {
-	_statusCode = statusCode;
+const std::string& HTTPRequest::getMethod() const {
+	return _method;
 }
 
-void HTTPResponse::setReasonPhrase(const std::string& reasonPhrase) {
-	_reasonPhrase = reasonPhrase;
+const std::string& HTTPRequest::getPath() const {
+	return _path;
 }
 
-void HTTPResponse::addHeader(const std::string& key, const std::string& value) {
-	_headers[key] = value;
+const std::string& HTTPRequest::getProtocol() const {
+	return _protocol;
 }
 
-void HTTPResponse::setBody(const std::string& body) {
-	_body = body;
+const std::string& HTTPRequest::getVersion() const {
+	return _version;
 }
 
-const std::string HTTPResponse::toString() const {
-	std::string response = _version + " " + std::to_string(_statusCode) + " " + _reasonPhrase + "\r\n";
-	for (std::map<std::string, std::string>::const_iterator it = _headers.begin(); it != _headers.end(); ++it) {
-		response += it->first + ": " + it->second + "\r\n";
+const std::map<std::string, std::string>& HTTPRequest::getQueries() const {
+	return _queries;
+}
+
+const std::map<std::string, std::string>& HTTPRequest::getHeaders() const {
+	return _headers;
+}
+
+const std::string& HTTPRequest::getBody() const {
+	return _body;
+}
+
+// Case-insensitive header lookup
+std::string HTTPRequest::getHeader(const std::string& key) const {
+	std::map<std::string, std::string>::const_iterator it = _headers.find(key);
+	if (it != _headers.end())
+		return it->second;
+
+	std::string lowerKey = safeToLower(key);
+	for (it = _headers.begin(); it != _headers.end(); ++it) {
+		if (safeToLower(it->first) == lowerKey)
+			return it->second;
 	}
-	response += "\r\n" + _body;
-	return response;
+	return "";
+}
+
+// Parse key=value&key2=value2 pairs into _queries
+void HTTPRequest::_parseQueryString(const std::string& queryStr) {
+	size_t pos = 0;
+	while (pos <= queryStr.size()) {
+		size_t ampPos = queryStr.find('&', pos);
+		if (ampPos == std::string::npos)
+			ampPos = queryStr.size();
+
+		std::string pair = queryStr.substr(pos, ampPos - pos);
+		if (!pair.empty()) {
+			size_t eqPos = pair.find('=');
+			if (eqPos != std::string::npos) {
+				_queries[urlDecode(pair.substr(0, eqPos))] = urlDecode(pair.substr(eqPos + 1));
+			} else {
+				_queries[urlDecode(pair)] = "";
+			}
+		}
+		if (ampPos == queryStr.size())
+			break;
+		pos = ampPos + 1;
+	}
+}
+
+bool HTTPRequest::parse(const std::string& rawRequest) {
+	_method.clear();
+	_path.clear();
+	_protocol.clear();
+	_version.clear();
+	_queries.clear();
+	_headers.clear();
+	_body.clear();
+
+	size_t headerEnd = rawRequest.find("\r\n\r\n");
+	if (headerEnd == std::string::npos)
+		return false;
+
+	size_t lineEnd = rawRequest.find("\r\n");
+	if (lineEnd == std::string::npos || lineEnd > headerEnd)
+		return false;
+
+	if (!parseRequestLine(rawRequest.substr(0, lineEnd), _method, _path, _protocol, _version))
+		return false;
+
+	std::string rawHeaders = rawRequest.substr(lineEnd + 2, headerEnd - lineEnd - 2);
+	if (!parseHeaders(rawHeaders, _headers))
+		return false;
+
+	std::string rawBody = rawRequest.substr(headerEnd + 4);
+
+	parseBody(rawBody, _headers, _body);
+
+	return validate();
+}
+
+bool HTTPRequest::validate() const {
+	if (_method != "GET" && _method != "POST" && _method != "DELETE")
+		return false;
+
+	if (_path.empty() || _path[0] != '/')
+		return false;
+
+	if (_protocol != "HTTP")
+		return false;
+
+	if (_version != "1.0" && _version != "1.1")
+		return false;
+
+	if (getHeader("Host").empty())
+		return false;
+
+	if (_method == "POST") {
+		bool hasLength = !getHeader("Content-Length").empty();
+		bool isChunked = safeToLower(getHeader("Transfer-Encoding")) == "chunked";
+		if (!hasLength && !isChunked)
+			return false;
+	}
+
+	return true;
+}
+
+void HTTPRequest::fill1() {
+	_method = "GET";
+	_path = "/test";
+	_protocol = "HTTP";
+	_version = "1.1";
+	_queries["name"] = "value";
+	_headers["Content-Type"] = "text/html";
+	_headers["Host"] = "localhost";
+}
+
+void HTTPRequest::fill2() {
+	_method = "GET";
+	_path = "/cgi-index";
+	_protocol = "HTTP";
+	_version = "1.1";
+	_queries["name"] = "value";
+	_headers["Content-Type"] = "text/html";
+	_headers["Host"] = "localhost";
 }
