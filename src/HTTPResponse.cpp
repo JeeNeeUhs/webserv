@@ -51,7 +51,6 @@ const std::string& HTTPRequest::getBody() const {
 	return _body;
 }
 
-// Case-insensitive header lookup
 std::string HTTPRequest::getHeader(const std::string& key) const {
 	std::map<std::string, std::string>::const_iterator it = _headers.find(key);
 	if (it != _headers.end())
@@ -65,7 +64,6 @@ std::string HTTPRequest::getHeader(const std::string& key) const {
 	return "";
 }
 
-// Parse key=value&key2=value2 pairs into _queries
 void HTTPRequest::_parseQueryString(const std::string& queryStr) {
 	size_t pos = 0;
 	while (pos <= queryStr.size()) {

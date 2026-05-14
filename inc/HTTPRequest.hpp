@@ -4,6 +4,25 @@
 # include <string>
 # include <map>
 
+/*
+Request:
+
+POST /index HTTP/1.0
+Content-Type: text/html
+Content-Length: 100
+User-Agent: curl/8.4.0
+Host: www.example.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64)
+Accept: text/html, application/xhtml+xml, application/xml;q=0.9, *//*;q=0.8
+Accept-Language: tr-TR, tr;q=0.9, en-US;q=0.8, en;q=0.7
+Accept-Charset: utf-8, iso-8859-9;q=0.9, *;q=0.8
+Accept-Encoding: gzip, compress
+Referer: http://www.google.com/
+Authorization: Basic ZW1pcmhhbjpwYXNzd29yZA==
+
+bodydeneme
+*/
+
 class HTTPRequest {
 	private:
 		std::string _method;
