@@ -34,9 +34,6 @@ class HTTPRequest {
 		const std::string& getBody() const;
 		std::string getHeader(const std::string& key) const;
 
-		void fill1();
-		void fill2();
-
 		bool validate() const;
 		bool parse(const std::string& rawRequest);
 };

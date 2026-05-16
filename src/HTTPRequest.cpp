@@ -246,9 +246,7 @@ bool HTTPRequest::parse(const std::string& rawRequest) {
 }
 
 bool HTTPRequest::validate() const {
-	// Method must be a supported verb
-	if (_method != "GET" && _method != "POST" && _method != "DELETE" &&
-		_method != "HEAD" && _method != "PUT" && _method != "OPTIONS")
+	if (_method != "GET" && _method != "POST" && _method != "DELETE")
 		return false;
 
 	// Path must be non-empty and absolute
@@ -278,22 +276,3 @@ bool HTTPRequest::validate() const {
 	return true;
 }
 
-void HTTPRequest::fill1() {
-	_method = "GET";
-	_path = "/test";
-	_protocol = "HTTP";
-	_version = "1.1";
-	_queries["name"] = "value";
-	_headers["Content-Type"] = "text/html";
-	_headers["Host"] = "localhost";
-}
-
-void HTTPRequest::fill2() {
-	_method = "GET";
-	_path = "/cgi-index";
-	_protocol = "HTTP";
-	_version = "1.1";
-	_queries["name"] = "value";
-	_headers["Content-Type"] = "text/html";
-	_headers["Host"] = "localhost";
-}

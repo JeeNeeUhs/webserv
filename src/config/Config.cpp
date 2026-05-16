@@ -256,7 +256,7 @@ size_t Config::parseSize(const std::string& value) {
 // ─── Validation (Adım 5) ─────────────────────────────────────────────────────
 
 static bool isValidMethod(const std::string& m) {
-	return m == "GET" || m == "POST" || m == "DELETE" || m == "HEAD";
+	return m == "GET" || m == "POST" || m == "DELETE";
 }
 
 static bool isValidRedirectCode(int code) {
