@@ -8,6 +8,8 @@
 class Server;
 
 class Location {
+	friend class Config;
+
 	private:
 		std::string path;
 		std::string root;

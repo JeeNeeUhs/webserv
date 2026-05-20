@@ -4,8 +4,11 @@ BUILD_DIR	= build
 
 VPATH		= src #:src/config:src/logger
 SRCS		= main.cpp \
+			utils.cpp \
 			Config.cpp \
-			Logger.cpp
+			Logger.cpp \
+			Server.cpp \
+			Location.cpp
 OBJS		= $(addprefix $(BUILD_DIR)/,$(SRCS:.cpp=.o))
 INCS		= -Iinc #-Iinc/config -Iinc/logger
 
