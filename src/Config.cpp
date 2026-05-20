@@ -8,6 +8,8 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <set>
+#include <algorithm>
 
 Config::Config() : _filePath(DEFAULT_CONFIG_PATH) {}
 
@@ -71,14 +73,16 @@ std::string Config::getNextToken() {
 	return token;
 }
 
-void Config::parseLocation(Server& srv, const std::string& parentPath, Location currentState) {
+void Config::parseLocation(Server& srv, const std::string& parentPath, Location inheritedLoc) {
+	std::set<std::string> setDirectives;
+
 	std::string locPath = _currToken;
-	
+
 	if (!parentPath.empty()) {
 		if (locPath.find(parentPath) != 0)
 			throw std::runtime_error("location \"" + locPath + "\" is outside location \"" + parentPath + "\"");
 	}
-	currentState.path = locPath;
+	inheritedLoc.path = locPath;
 
 	_currToken = getNextToken();
 	expectToken("{");
@@ -87,14 +91,71 @@ void Config::parseLocation(Server& srv, const std::string& parentPath, Location 
 		std::string directive = _currToken;
 		_currToken = getNextToken();
 
-		if (directive == "root")
-			currentState.root = _currToken;
-		else if (directive == "index")
-			currentState.index = _currToken;
+		if (directive == "root") {
+			if (setDirectives.count("root"))
+				throw std::runtime_error("duplicate root directive in location context");
+
+			inheritedLoc.root = _currToken;
+			setDirectives.insert("root");
+		}
+		else if (directive == "index") {
+			if (setDirectives.count("index"))
+				throw std::runtime_error("duplicate index directive in location context");
+
+			inheritedLoc.index = _currToken;
+			setDirectives.insert("index");
+		}
+		else if (directive == "autoindex") {
+			if (setDirectives.count("autoindex"))
+				throw std::runtime_error("duplicate autoindex directive in location context");
+			if (_currToken != "on" && _currToken != "off")
+				throw std::runtime_error("invalid value for autoindex directive: " + _currToken);
+
+			inheritedLoc.autoindex = _currToken == "on";
+			setDirectives.insert("autoindex");
+		}
+		else if (directive == "redirect") {
+			if (setDirectives.count("redirect"))
+				throw std::runtime_error("duplicate redirect directive in location context");
+
+			int redirectCode = parseInt(_currToken);
+			std::string redirectPath = getNextToken();
+
+			inheritedLoc.redirect = std::make_pair(redirectCode, redirectPath);
+			setDirectives.insert("redirect");
+		}
+		else if (directive == "upload_store") {
+			if (setDirectives.count("upload_store"))
+				throw std::runtime_error("duplicate upload_store directive in location context");
+
+			inheritedLoc.uploadStore = _currToken;
+			setDirectives.insert("upload_store");
+		}
+		else if (directive == "cgi_extension") {
+			inheritedLoc.cgiExtensions.push_back(_currToken);
+		}
+		else if (directive == "error_page") {
+			if (_currToken.size() != 3
+				&& std::string("12345").find(_currToken[0]) == std::string::npos)
+				throw std::runtime_error("invalid value for error_page directive: " + _currToken);
+
+			int errorCode = parseInt(_currToken);
+			std::string errorPage = getNextToken();
+
+			inheritedLoc.errorPages[errorCode] = errorPage;
+		}
 		else if (directive == "methods") {
-			// currentState.methods.clear();
+			// clear the inherited methods vector
+			inheritedLoc.methods.clear();
+
 			while (_currToken != ";") {
-				currentState.methods.push_back(_currToken);
+				if (_currToken != "GET" && _currToken != "POST" && _currToken != "DELETE")
+					throw std::runtime_error("invalid value for methods directive: " + _currToken);
+				if (std::find(inheritedLoc.methods.begin(), inheritedLoc.methods.end(), _currToken)
+					!= inheritedLoc.methods.end())
+					throw std::runtime_error("duplicate method for methods directive: " + _currToken);
+
+				inheritedLoc.methods.push_back(_currToken);
 				_currToken = getNextToken();
 			}
 
@@ -102,7 +163,7 @@ void Config::parseLocation(Server& srv, const std::string& parentPath, Location 
 			continue;
 		}
 		else if (directive == "location") {
-			parseLocation(srv, currentState.path, currentState);
+			parseLocation(srv, inheritedLoc.path, inheritedLoc);
 			continue;
 		}
 		else
@@ -113,7 +174,7 @@ void Config::parseLocation(Server& srv, const std::string& parentPath, Location 
 	}
 
 	expectToken("}");
-	srv.locations.push_back(currentState);
+	srv.locations.push_back(inheritedLoc);
 }
 
 void Config::parseServer(void) {
@@ -145,21 +206,26 @@ void Config::parseServer(void) {
 		}
 		else if (directive == "index")
 			baseLoc.index = _currToken;
-		else if (directive == "cgi_extension")
-			srv.cgi_extensions.push_back(_currToken);
+		else if (directive == "cgi_extension") {
+			srv.cgiExtensions.push_back(_currToken);
+			baseLoc.cgiExtensions.push_back(_currToken);
+		}
 		else if (directive == "error_page") {
 			if (_currToken.size() != 3
 				&& std::string("12345").find(_currToken[0]) == std::string::npos)
-				throw std::runtime_error("invalid error code for error_page directive");
+				throw std::runtime_error("invalid value for error_page directive: " + _currToken);
 
 			int errorCode = parseInt(_currToken);
 			std::string errorPage = getNextToken();
 
-			srv.error_pages[errorCode] = errorPage;
+			srv.errorPages[errorCode] = errorPage;
+			baseLoc.errorPages[errorCode] = errorPage;
 		}
 		else if (directive == "methods") {
 			while (_currToken != ";") {
 				srv.methods.push_back(_currToken);
+				baseLoc.methods.push_back(_currToken);
+
 				_currToken = getNextToken();
 			}
 			
@@ -196,7 +262,7 @@ void Config::parseServer(void) {
 }
 
 void Config::parseFile(void) {
-	_file.open(_filePath);
+	_file.open(_filePath.c_str());
 	if (!_file.is_open())
 		throw std::runtime_error("cannot open config file: " + _filePath);
 
@@ -207,20 +273,6 @@ void Config::parseFile(void) {
 			throw std::runtime_error("unexpected token outside server block: " + _currToken);
 		parseServer();
 	}
-
-	// std::vector<Server>::iterator it;
-	// for (it = _servers.begin(); it != _servers.end(); ++it) {
-	// 	std::vector<std::pair<std::string, int> > vec = (*it).listens;
-
-	// 	std::vector<std::pair<std::string, int> >::iterator it2;
-	// 	for (it2 = vec.begin(); it2 != vec.end(); ++it2)
-	// 		std::cout << (*it2).first << ", " << (*it2).second << std::endl;
-
-	// 	std::cout << (*it).clientMaxHeaderSize << std::endl;
-	// 	std::cout << (*it).clientMaxBodySize << std::endl;
-	// 	std::cout << (*it).clientHeaderTimeout << std::endl;
-	// 	std::cout << (*it).clientBodyTimeout << std::endl;
-	// }
 
 	_file.close();
 }

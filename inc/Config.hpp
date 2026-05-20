@@ -22,6 +22,9 @@ class Config {
 		void parseLocation(Server& srv, const std::string& parentPath, Location currentState);
 		void parseServer(void);
 
+		void debugPrintServers() const;
+		void debugPrintLocation(const Location& loc, size_t depth) const;
+
 	public:
 		Config();
 		Config(const std::string& filePath);

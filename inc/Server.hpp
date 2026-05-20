@@ -23,8 +23,8 @@ class Server {
 		std::string index;
 		bool autoindex;
 
-		std::vector<std::string> cgi_extensions;
-		std::map<int, std::string> error_pages;
+		std::vector<std::string> cgiExtensions;
+		std::map<int, std::string> errorPages;
 		std::vector<std::string> methods;
 
 		std::vector<Location> locations;

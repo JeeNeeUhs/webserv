@@ -7,23 +7,12 @@ Location::Location()
 	root(""),
 	index(""),
 	autoindex(false),
-	redirect_code(0),
-	redirect_path(""),
-	upload_store(""),
+	uploadStore(""),
 	parent(NULL) {}
 
-Location::Location(const Location& other)
-	: path(other.path),
-	root(other.root),
-	index(other.index),
-	autoindex(other.autoindex),
-	redirect_code(other.redirect_code),
-	redirect_path(other.redirect_path),
-	upload_store(other.upload_store),
-	cgi_extensions(other.cgi_extensions),
-	error_pages(other.error_pages),
-	methods(other.methods),
-	parent(other.parent) {}
+Location::Location(const Location& other) {
+	operator=(other);
+}
 
 Location& Location::operator=(const Location& other) {
 	if (this != &other) {
@@ -31,11 +20,9 @@ Location& Location::operator=(const Location& other) {
 		root = other.root;
 		index = other.index;
 		autoindex = other.autoindex;
-		redirect_code = other.redirect_code;
-		redirect_path = other.redirect_path;
-		upload_store = other.upload_store;
-		cgi_extensions = other.cgi_extensions;
-		error_pages = other.error_pages;
+		uploadStore = other.uploadStore;
+		cgiExtensions = other.cgiExtensions;
+		errorPages = other.errorPages;
 		methods = other.methods;
 		parent = other.parent;
 	}
@@ -66,8 +53,8 @@ void Location::fill(Server* parent) {
 	root = "/Users/nothing/cowd/test";
 	index = "script.py";
 	autoindex = false;
-	upload_store = "/var/www/uploads";
-	cgi_extensions.push_back(".py");
+	uploadStore = "/var/www/uploads";
+	cgiExtensions.push_back(".py");
 	methods.push_back("GET");
 	this->parent = parent;
 }
@@ -77,8 +64,8 @@ void Location::fill2(Server* parent) {
 	root = "/Users/nothing/cowd/test";
 	index = "index.py";
 	autoindex = false;
-	upload_store = "/var/www/uploads";
-	cgi_extensions.push_back(".py");
+	uploadStore = "/var/www/uploads";
+	cgiExtensions.push_back(".py");
 	methods.push_back("GET");
 	this->parent = parent;
 }

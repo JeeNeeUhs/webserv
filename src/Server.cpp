@@ -1,6 +1,8 @@
 #include "Server.hpp"
 #include "utils.hpp"
 
+#include <stdexcept>
+
 Server::Server()
 	: sockFd(-1),
 	clientMaxHeaderSize(0),
@@ -11,20 +13,9 @@ Server::Server()
 	index(""),
 	autoindex(false) {}
 
-Server::Server(const Server& other)
-	: sockFd(other.sockFd),
-	listens(other.listens),
-	clientMaxHeaderSize(other.clientMaxHeaderSize),
-	clientMaxBodySize(other.clientMaxBodySize),
-	clientHeaderTimeout(other.clientHeaderTimeout),
-	clientBodyTimeout(other.clientBodyTimeout),
-	root(other.root),
-	index(other.index),
-	autoindex(other.autoindex),
-	cgi_extensions(other.cgi_extensions),
-	error_pages(other.error_pages),
-	methods(other.methods),
-	locations(other.locations) {}
+Server::Server(const Server& other) {
+	operator=(other);
+}
 
 Server& Server::operator=(const Server& other) {
 	if (this != &other) {
@@ -34,8 +25,8 @@ Server& Server::operator=(const Server& other) {
 		root = other.root;
 		index = other.index;
 		autoindex = other.autoindex;
-		cgi_extensions = other.cgi_extensions;
-		error_pages = other.error_pages;
+		cgiExtensions = other.cgiExtensions;
+		errorPages = other.errorPages;
 		methods = other.methods;
 		locations = other.locations;
 	}
@@ -94,7 +85,7 @@ void Server::fill() {
 	root = "/Users/nothing/cowd";
 	index = "index.html";
 	autoindex = false;
-	cgi_extensions.push_back(".py");
+	cgiExtensions.push_back(".py");
 	methods.push_back("GET");
 	
 	Location loc1;
