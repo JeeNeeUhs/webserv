@@ -132,9 +132,14 @@ void Config::parseLocation(Server& srv, const std::string& parentPath, Location 
 			setDirectives.insert("upload_store");
 		}
 		else if (directive == "cgi_extension") {
+			if (std::find(inheritedLoc.cgiExtensions.begin(), inheritedLoc.cgiExtensions.end(), _currToken)
+				!= inheritedLoc.cgiExtensions.end())
+				throw std::runtime_error("duplicate extension for cgi_extension directive: " + _currToken);
+
 			inheritedLoc.cgiExtensions.push_back(_currToken);
 		}
 		else if (directive == "error_page") {
+			// TODO: check the real status codes
 			if (_currToken.size() != 3
 				&& std::string("12345").find(_currToken[0]) == std::string::npos)
 				throw std::runtime_error("invalid value for error_page directive: " + _currToken);
@@ -145,6 +150,9 @@ void Config::parseLocation(Server& srv, const std::string& parentPath, Location 
 			inheritedLoc.errorPages[errorCode] = errorPage;
 		}
 		else if (directive == "methods") {
+			if (setDirectives.count("methods"))
+				throw std::runtime_error("duplicate methods directive in location context");
+
 			// clear the inherited methods vector
 			inheritedLoc.methods.clear();
 
@@ -158,6 +166,8 @@ void Config::parseLocation(Server& srv, const std::string& parentPath, Location 
 				inheritedLoc.methods.push_back(_currToken);
 				_currToken = getNextToken();
 			}
+			
+			setDirectives.insert("methods");
 
 			expectToken(";");
 			continue;
@@ -211,10 +221,6 @@ void Config::parseServer(void) {
 			baseLoc.cgiExtensions.push_back(_currToken);
 		}
 		else if (directive == "error_page") {
-			if (_currToken.size() != 3
-				&& std::string("12345").find(_currToken[0]) == std::string::npos)
-				throw std::runtime_error("invalid value for error_page directive: " + _currToken);
-
 			int errorCode = parseInt(_currToken);
 			std::string errorPage = getNextToken();
 
@@ -261,6 +267,143 @@ void Config::parseServer(void) {
 	_servers.push_back(srv);
 }
 
+void Config::debugPrintLocation(const Location& loc, size_t depth) const {
+	std::string indent(depth * 4, ' ');
+
+	std::cout << indent << "Location {" << std::endl;
+
+	std::cout << indent << "  path: " << loc.path << std::endl;
+	std::cout << indent << "  root: " << loc.root << std::endl;
+	std::cout << indent << "  index: " << loc.index << std::endl;
+
+	std::cout << indent << "  autoindex: "
+			  << (loc.autoindex ? "on" : "off") << std::endl;
+
+	std::cout << indent << "  upload_store: "
+			  << loc.uploadStore << std::endl;
+
+	if (loc.redirect.first != 0) {
+		std::cout << indent << "  redirect: "
+				  << loc.redirect.first
+				  << " -> "
+				  << loc.redirect.second
+				  << std::endl;
+	}
+
+	std::cout << indent << "  methods: ";
+	if (loc.methods.empty())
+		std::cout << "(none)";
+	else {
+		for (size_t i = 0; i < loc.methods.size(); ++i)
+			std::cout << loc.methods[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << indent << "  cgi_extensions: ";
+	if (loc.cgiExtensions.empty())
+		std::cout << "(none)";
+	else {
+		for (size_t i = 0; i < loc.cgiExtensions.size(); ++i)
+			std::cout << loc.cgiExtensions[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << indent << "  error_pages:" << std::endl;
+	if (loc.errorPages.empty()) {
+		std::cout << indent << "    (none)" << std::endl;
+	}
+	else {
+		for (std::map<int, std::string>::const_iterator it = loc.errorPages.begin();
+			 it != loc.errorPages.end();
+			 ++it) {
+			std::cout << indent << "    "
+					  << it->first
+					  << " -> "
+					  << it->second
+					  << std::endl;
+		}
+	}
+
+	std::cout << indent << "}" << std::endl;
+}
+
+void Config::debugPrintServers(void) const {
+	for (size_t i = 0; i < _servers.size(); ++i) {
+		const Server& srv = _servers[i];
+
+		std::cout << "Server #" << i + 1 << " {" << std::endl;
+
+		std::cout << "  listens: ";
+		std::cout << std::endl;
+		if (srv.listens.empty())
+			std::cout << "  (none)";
+		else {
+			for (size_t j = 0; j < srv.listens.size(); ++j)
+				std::cout << "    " << srv.listens[j].first << ":" << srv.listens[j].second << std::endl;
+		}
+
+		std::cout << "  root: " << srv.root << std::endl;
+
+		std::cout << "  methods: ";
+		if (srv.methods.empty())
+			std::cout << "(none)";
+		else {
+			for (size_t j = 0; j < srv.methods.size(); ++j)
+				std::cout << srv.methods[j] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "  cgi_extensions: ";
+		if (srv.cgiExtensions.empty())
+			std::cout << "(none)";
+		else {
+			for (size_t j = 0; j < srv.cgiExtensions.size(); ++j)
+				std::cout << srv.cgiExtensions[j] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "  client_max_header_size: "
+				  << srv.clientMaxHeaderSize << std::endl;
+
+		std::cout << "  client_max_body_size: "
+				  << srv.clientMaxBodySize << std::endl;
+
+		std::cout << "  client_header_timeout: "
+				  << srv.clientHeaderTimeout << std::endl;
+
+		std::cout << "  client_body_timeout: "
+				  << srv.clientBodyTimeout << std::endl;
+
+		std::cout << "  error_pages:" << std::endl;
+		if (srv.errorPages.empty()) {
+			std::cout << "    (none)" << std::endl;
+		}
+		else {
+			for (std::map<int, std::string>::const_iterator it = srv.errorPages.begin();
+				 it != srv.errorPages.end();
+				 ++it) {
+				std::cout << "    "
+						  << it->first
+						  << " -> "
+						  << it->second
+						  << std::endl;
+			}
+		}
+
+		std::cout << "  locations:" << std::endl;
+
+		if (srv.locations.empty()) {
+			std::cout << "    (none)" << std::endl;
+		}
+		else {
+			for (size_t j = 0; j < srv.locations.size(); ++j)
+				debugPrintLocation(srv.locations[j], 1);
+		}
+
+		std::cout << "}" << std::endl << std::endl;
+	}
+}
+
 void Config::parseFile(void) {
 	_file.open(_filePath.c_str());
 	if (!_file.is_open())
@@ -275,6 +418,8 @@ void Config::parseFile(void) {
 	}
 
 	_file.close();
+
+	debugPrintServers();
 }
 
 std::vector<Server> Config::getServers(void) {
