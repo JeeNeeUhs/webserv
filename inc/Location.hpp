@@ -8,18 +8,19 @@
 class Server;
 
 class Location {
+	friend class Config;
+
 	private:
 		std::string path;
 		std::string root;
 		std::string index;
 		bool autoindex;
 		
-		int redirect_code;
-		std::string redirect_path;
-		std::string upload_store;
+		std::pair<int, std::string> redirect;
+		std::string uploadStore;
 
-		std::vector<std::string> cgi_extensions;
-		std::map<int, std::string> error_pages;
+		std::vector<std::string> cgiExtensions;
+		std::map<int, std::string> errorPages;
 		std::vector<std::string> methods;
 
 		Server* parent;
