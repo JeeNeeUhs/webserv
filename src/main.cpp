@@ -2,10 +2,11 @@
 #include "Logger.hpp"
 #include "Config.hpp"
 
+#include <sstream>
 #include <iostream>
 #include <vector>
 
-std::string parseArgs(int argc, char *argv[]) {
+static std::string parseArgs(int argc, char *argv[]) {
 	std::string filePath;
 
 	for (int i = 1; i < argc; ++i) {
@@ -30,20 +31,31 @@ std::string parseArgs(int argc, char *argv[]) {
 	return filePath;
 }
 
-int main(int argc, char *argv[]) {
-	std::vector<Server> servers;
+static void printUsage(const std::string& reason) {
+	std::cerr << PROGRAM_NAME << ": " << reason << "\n\n"
+			<< "Usage: " << PROGRAM_NAME << " [OPTION]... [FILE]\n\n"
+			<< "Options:\n  -d, --debug      enable debug output\n\n"
+			<< "Arguments:\n  FILE             optional config file path\n";
+}
 
+int main(int argc, char *argv[]) {
 	try {
 		std::string configPath = parseArgs(argc, argv);
-		Config c(configPath);
-		c.parseFile();
 
-		servers = c.getServers();
+		Config config(configPath);
+		config.load();
+
+		// std::vector<Server> servers;
+		// const std::vector<ServerConfig>& configs = config.getServers();
+		// for (size_t i = 0; i < configs.size(); ++i)
+			// servers.push_back(Server(configs[i]));
+
+		// std::ostringstream msg;
+		// msg << "loaded config with " << servers.size() << " server block(s)";
+		// Logger::info(msg.str());
+
 	} catch (const std::invalid_argument& e) {
-		std::cerr << PROGRAM_NAME << ": " << e.what() <<"\n\n"
-				<< "Usage: " << PROGRAM_NAME << " [OPTION]... [FILE]\n\n"
-				<< "Options:\n  -d, --debug      enable debug output\n\n"
-				<< "Arguments:\n  FILE             optional config file path\n";
+		printUsage(e.what());
 		return 1;
 	} catch (const std::exception& e) {
 		Logger::error(e.what());
