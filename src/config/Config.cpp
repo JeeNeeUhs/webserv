@@ -48,7 +48,7 @@ void Config::validateListens(ServerConfig& srv, std::set<std::pair<std::string, 
 		if (host.empty())
 			host = defaults::DEFAULT_HOST;
 
-		int port = utils::parseInt(portStr);
+		int port = utils::parseSizeT(portStr);
 		if (port < 1 || port > 65535)
 			throw std::runtime_error("invalid port for listen directive: " + portStr);
 
@@ -59,7 +59,7 @@ void Config::validateListens(ServerConfig& srv, std::set<std::pair<std::string, 
 		const std::pair<std::string, int>& l = listens[i];
 
 		if (seen.count(l))
-			throw std::runtime_error("duplicate listen :" + l.first + ":" + utils::itos(l.second));
+			throw std::runtime_error("duplicate listen for " + l.first + ":" + utils::toString(l.second));
 
 		seen.insert(l);
 	}
@@ -95,13 +95,13 @@ void Config::validateLocation(const LocationConfig& loc) {
 		int code = loc.redirect.first;
 
 		if (code < 300 || code > 399)
-			throw std::runtime_error("invalid redirect status code in location \"" + loc.path + "\": " + utils::itos(code));
+			throw std::runtime_error("invalid redirect status code in location \"" + loc.path + "\": " + utils::toString(code));
 	}
 
 	for (std::map<int, std::string>::const_iterator it = loc.errorPages.begin();
 		it != loc.errorPages.end(); ++it) {
 		if (it->first < 100 || it->first > 599)
-			throw std::runtime_error("invalid status code for error_page in location \"" + loc.path + "\": " + utils::itos(it->first));
+			throw std::runtime_error("invalid status code for error_page in location \"" + loc.path + "\": " + utils::toString(it->first));
 	}
 }
 
@@ -109,7 +109,7 @@ void Config::validateStatusCodes(const ServerConfig& srv) {
 	for (std::map<int, std::string>::const_iterator it = srv.errorPages.begin();
 		it != srv.errorPages.end(); ++it) {
 		if (it->first < 100 || it->first > 599)
-			throw std::runtime_error("invalid status code for error_page: " + utils::itos(it->first));
+			throw std::runtime_error("invalid status code for error_page: " + utils::toString(it->first));
 	}
 }
 
@@ -149,7 +149,7 @@ void Config::debugPrintLocation(const LocationConfig& loc) const {
 	Logger::debug("      upload_store: " + loc.uploadStore);
 
 	if (loc.redirect.first != 0)
-		Logger::debug("      redirect: " + utils::itos(loc.redirect.first) + " -> " + loc.redirect.second);
+		Logger::debug("      redirect: " + utils::toString(loc.redirect.first) + " -> " + loc.redirect.second);
 	else
 		Logger::debug("      redirect: (empty)");
 
@@ -171,7 +171,7 @@ void Config::debugPrintLocation(const LocationConfig& loc) const {
 	if (!loc.errorPages.empty()) {
 		std::map<int, std::string>::const_iterator it;
 		for (it = loc.errorPages.begin(); it != loc.errorPages.end(); ++it)
-			Logger::debug("        " + utils::itos(it->first) + " -> " + it->second);
+			Logger::debug("        " + utils::toString(it->first) + " -> " + it->second);
 	} else
 		Logger::debug("      (empty)");
 
@@ -183,7 +183,7 @@ void Config::debugPrintServer(const ServerConfig& srv) const {
 
 	Logger::debug("  listens");
 	for (size_t j = 0; j < srv.listens.size(); ++j)
-		Logger::debug("    " + srv.listens[j].first + ":" + utils::itos(srv.listens[j].second));
+		Logger::debug("    " + srv.listens[j].first + ":" + utils::toString(srv.listens[j].second));
 
 	Logger::debug("  root: " + srv.root);
 	Logger::debug("  index: " + srv.index);
@@ -203,16 +203,16 @@ void Config::debugPrintServer(const ServerConfig& srv) const {
 	} else
 		Logger::debug("    (empty)");
 
-	Logger::debug("  client_max_header_size: " + utils::itos(srv.clientMaxHeaderSize));
-	Logger::debug("  client_max_body_size: " + utils::itos(srv.clientMaxBodySize));
-	Logger::debug("  client_header_timeout: " + utils::itos(srv.clientHeaderTimeout));
-	Logger::debug("  client_body_timeout: " + utils::itos(srv.clientBodyTimeout));
+	Logger::debug("  client_max_header_size: " + utils::toString(srv.clientMaxHeaderSize));
+	Logger::debug("  client_max_body_size: " + utils::toString(srv.clientMaxBodySize));
+	Logger::debug("  client_header_timeout: " + utils::toString(srv.clientHeaderTimeout));
+	Logger::debug("  client_body_timeout: " + utils::toString(srv.clientBodyTimeout));
 
 	Logger::debug("  error_pages:");
 	if (!srv.errorPages.empty()) {
 		std::map<int, std::string>::const_iterator it;
 		for (it = srv.errorPages.begin(); it != srv.errorPages.end(); ++it)
-			Logger::debug("    " + utils::itos(it->first) + " -> " + it->second);
+			Logger::debug("    " + utils::toString(it->first) + " -> " + it->second);
 	}
 	else
 		Logger::debug("    (empty)");

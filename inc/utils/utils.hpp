@@ -2,10 +2,17 @@
 # define UTILS_HPP
 
 # include <string>
+# include <sstream>
 
 namespace utils {
-	int parseInt(const std::string& str);
-	std::string itos(const int& n);
+	size_t parseSizeT(const std::string& s);
+
+	template <typename T>
+	std::string toString(const T& n) {
+		std::ostringstream oss;
+		oss << n;
+		return oss.str();
+	}
 }
 
 #endif

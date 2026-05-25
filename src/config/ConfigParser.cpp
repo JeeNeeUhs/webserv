@@ -4,12 +4,6 @@
 #include <sstream>
 #include <algorithm>
 
-// ConfigParser();
-// ConfigParser(const std::string& src);
-// ConfigParser(const ConfigParser& other);
-// ConfigParser& operator=(const ConfigParser& other);
-// ~ConfigParser();
-
 ConfigParser::ConfigParser()
 	: _src(""), _line(1), _curr(""), _pos(0) {}
 
@@ -34,7 +28,7 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other) {
 ConfigParser::~ConfigParser() {}
 
 void ConfigParser::error(const std::string& msg) const {
-	throw std::runtime_error("config error in line " + utils::itos(_line) + ": " + msg);
+	throw std::runtime_error("config error in line " + utils::toString(_line) + ": " + msg);
 }
 
 
@@ -134,7 +128,7 @@ void ConfigParser::parseLocationDirective(LocationConfig& loc, const std::string
 		if (std::find(seen.begin(), seen.end(), "redirect") != seen.end())
 			error("duplicate redirect directive in location context");
 
-		int code = utils::parseInt(_curr);
+		int code = utils::parseSizeT(_curr);
 		std::string target = getNextToken();
 		loc.redirect = std::make_pair(code, target);
 		seen.push_back("redirect");
@@ -153,7 +147,7 @@ void ConfigParser::parseLocationDirective(LocationConfig& loc, const std::string
 		loc.cgiExtensions.push_back(_curr);
 	}
 	else if (directive == "error_page") {
-		int code = utils::parseInt(_curr);
+		int code = utils::parseSizeT(_curr);
 		std::string page = getNextToken();
 		loc.errorPages[code] = page;
 	}
@@ -178,13 +172,13 @@ void ConfigParser::parseServerDirective(ServerConfig& srv, LocationConfig& baseL
 		// host/port splitting will be in Config::validate 
 		srv.listens.push_back(std::make_pair(_curr, 0));
 	else if (directive == "client_max_header_size")
-		srv.clientMaxHeaderSize = utils::parseInt(_curr);
+		srv.clientMaxHeaderSize = utils::parseSizeT(_curr);
 	else if (directive == "client_max_body_size")
-		srv.clientMaxBodySize = utils::parseInt(_curr);
+		srv.clientMaxBodySize = utils::parseSizeT(_curr);
 	else if (directive == "client_header_timeout")
-		srv.clientHeaderTimeout = utils::parseInt(_curr);
+		srv.clientHeaderTimeout = utils::parseSizeT(_curr);
 	else if (directive == "client_body_timeout")
-		srv.clientBodyTimeout = utils::parseInt(_curr);
+		srv.clientBodyTimeout = utils::parseSizeT(_curr);
 	else if (directive == "root") {
 		srv.root = _curr;
 		baseLoc.root = _curr;
@@ -204,7 +198,7 @@ void ConfigParser::parseServerDirective(ServerConfig& srv, LocationConfig& baseL
 		baseLoc.cgiExtensions.push_back(_curr);
 	}
 	else if (directive == "error_page") {
-		int code = utils::parseInt(_curr);
+		int code = utils::parseSizeT(_curr);
 		std::string page = getNextToken();
 		srv.errorPages[code] = page;
 		baseLoc.errorPages[code] = page;
