@@ -31,9 +31,9 @@ namespace utils {
 	}
 
 	std::string itos(const int& n) {
-		std::stringstream ss;
+		std::ostringstream oss;
 		
-		ss << n;
-		return ss.str();
+		oss << n;
+		return oss.str();
 	}
 }

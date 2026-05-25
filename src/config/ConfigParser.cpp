@@ -34,10 +34,7 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other) {
 ConfigParser::~ConfigParser() {}
 
 void ConfigParser::error(const std::string& msg) const {
-	std::ostringstream oss;
-	oss << "config error (line " << _line << "): " << msg;
-
-	throw std::runtime_error(oss.str());
+	throw std::runtime_error("config error in line " + utils::itos(_line) + ": " + msg);
 }
 
 

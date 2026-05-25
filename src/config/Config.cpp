@@ -58,12 +58,8 @@ void Config::validateListens(ServerConfig& srv, std::set<std::pair<std::string, 
 	for (size_t i = 0; i < listens.size(); ++i) {
 		const std::pair<std::string, int>& l = listens[i];
 
-		if (seen.count(l)) {
-			std::ostringstream oss;
-			oss << "duplicate listen: " << l.first << ":" << l.second;
-		
-			throw std::runtime_error(oss.str());
-		}
+		if (seen.count(l))
+			throw std::runtime_error("duplicate listen :" + l.first + ":" + utils::itos(l.second));
 
 		seen.insert(l);
 	}
@@ -98,34 +94,22 @@ void Config::validateLocation(const LocationConfig& loc) {
 	if (loc.redirect.first != 0) {
 		int code = loc.redirect.first;
 
-		if (code < 300 || code > 399) {
-			std::ostringstream oss;
-			oss << "invalid redirect status code in location \"" << loc.path << "\": " << code;
-
-			throw std::runtime_error(oss.str());
-		}
+		if (code < 300 || code > 399)
+			throw std::runtime_error("invalid redirect status code in location \"" + loc.path + "\": " + utils::itos(code));
 	}
 
 	for (std::map<int, std::string>::const_iterator it = loc.errorPages.begin();
 		it != loc.errorPages.end(); ++it) {
-		if (it->first < 100 || it->first > 599) {
-			std::ostringstream oss;
-			oss << "invalid status code for error_page in location \"" << loc.path << "\": " << it->first;
-
-			throw std::runtime_error(oss.str());
-		}
+		if (it->first < 100 || it->first > 599)
+			throw std::runtime_error("invalid status code for error_page in location \"" + loc.path + "\": " + utils::itos(it->first));
 	}
 }
 
 void Config::validateStatusCodes(const ServerConfig& srv) {
 	for (std::map<int, std::string>::const_iterator it = srv.errorPages.begin();
 		it != srv.errorPages.end(); ++it) {
-		if (it->first < 100 || it->first > 599) {
-			std::ostringstream oss;
-			oss << "invalid status code for error_page: " << it->first;
-
-			throw std::runtime_error(oss.str());
-		}
+		if (it->first < 100 || it->first > 599)
+			throw std::runtime_error("invalid status code for error_page: " + utils::itos(it->first));
 	}
 }
 
