@@ -12,7 +12,7 @@ typedef struct pollfd pollfd_t;
 
 class ServerManager {
 	private:
-		std::vector<ServerConfig> _configs;
+		std::vector<ServerConfig> _servers;
 
 		std::vector<pollfd_t>		_pollFds;
 		std::map<int, Listener>		_listeners;
@@ -32,7 +32,7 @@ class ServerManager {
 
 	public:
 		ServerManager();
-		ServerManager(const std::vector<ServerConfig>& configs);
+		ServerManager(const std::vector<ServerConfig>& servers);
 		ServerManager(const ServerManager& other);
 		ServerManager& operator=(const ServerManager& other);
 		~ServerManager();

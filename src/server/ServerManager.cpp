@@ -12,8 +12,8 @@
 
 ServerManager::ServerManager() {}
 
-ServerManager::ServerManager(const std::vector<ServerConfig>& configs)
-	: _configs(configs) {}
+ServerManager::ServerManager(const std::vector<ServerConfig>& servers)
+	: _servers(servers) {}
 
 ServerManager::ServerManager(const ServerManager& other) {
 	operator=(other);
@@ -21,7 +21,7 @@ ServerManager::ServerManager(const ServerManager& other) {
 
 ServerManager& ServerManager::operator=(const ServerManager& other) {
 	if (this != &other) {
-		_configs = other._configs;
+		_servers = other._servers;
 		// fds are not copied, each ServerManager should own its own fds
 		_pollFds.clear();
 		_listeners.clear();
@@ -259,8 +259,8 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 void ServerManager::setup(void) {
 	std::ostringstream listens;
 
-	for (size_t i = 0; i < _configs.size(); ++i) {
-		const ServerConfig& cfg = _configs[i];
+	for (size_t i = 0; i < _servers.size(); ++i) {
+		const ServerConfig& cfg = _servers[i];
 
 		for (size_t j = 0; j < cfg.listens.size(); ++j) {
 			const std::string& host = cfg.listens[j].first;
