@@ -18,7 +18,7 @@ class ConfigParser {
 		void	parseServerDirective(ServerConfig& srv, LocationConfig& baseLoc, const std::string& directive);
 		void	parseLocationDirective(LocationConfig& loc, const std::string& directive, std::vector<std::string>& seen);
 
-		std::vector<std::string> consumeMethodList();
+		std::vector<std::string> consumeMethodList(void);
 		void error(const std::string& msg) const;
 
 	public:

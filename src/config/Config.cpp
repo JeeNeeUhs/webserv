@@ -68,6 +68,8 @@ void Config::validateListens(ServerConfig& srv, std::set<std::pair<std::string, 
 }
 
 void Config::applyDefaults(ServerConfig& srv) {
+	if (srv.root.empty())
+		srv.root = defaults::DEFAULT_ROOT;
 	if (srv.index.empty())
 		srv.index = defaults::DEFAULT_INDEX;
 	if (srv.clientMaxBodySize == 0)
@@ -82,11 +84,12 @@ void Config::applyDefaults(ServerConfig& srv) {
 	for (size_t i = 0; i < srv.locations.size(); ++i) {
 		LocationConfig& loc = srv.locations[i];
 
-		if (loc.methods.empty())
-			loc.methods.push_back("GET");
-
+		if (loc.root.empty())
+			loc.root = srv.root;
 		if (loc.index.empty())
 			loc.index = srv.index;
+		if (loc.methods.empty())
+			loc.methods.push_back("GET");
 	}
 }
 
@@ -146,12 +149,10 @@ void Config::debugPrintLocation(const LocationConfig& loc) const {
 	Logger::debug("      root: " + loc.root);
 	Logger::debug("      index: " + loc.index);
 	Logger::debug("      autoindex: " + (loc.autoindex ? std::string("on"): std::string("off")));
-	Logger::debug("      upload_store: " + loc.uploadStore);
-
-	if (loc.redirect.first != 0)
-		Logger::debug("      redirect: " + utils::toString(loc.redirect.first) + " -> " + loc.redirect.second);
-	else
-		Logger::debug("      redirect: (empty)");
+	Logger::debug("      upload_store: " + (!loc.uploadStore.empty() ? loc.uploadStore : "(empty)"));
+	Logger::debug("      redirect: " + (loc.redirect.first != 0
+		? utils::toString(loc.redirect.first) + " -> " + loc.redirect.second
+		: "(empty)"));
 
 	Logger::debug("      methods:");
 	if (!loc.methods.empty()) {
@@ -173,7 +174,7 @@ void Config::debugPrintLocation(const LocationConfig& loc) const {
 		for (it = loc.errorPages.begin(); it != loc.errorPages.end(); ++it)
 			Logger::debug("        " + utils::toString(it->first) + " -> " + it->second);
 	} else
-		Logger::debug("      (empty)");
+		Logger::debug("        (empty)");
 
 	Logger::debug("    }");
 }

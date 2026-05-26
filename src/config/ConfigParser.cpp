@@ -31,8 +31,7 @@ void ConfigParser::error(const std::string& msg) const {
 	throw std::runtime_error("config error in line " + utils::toString(_line) + ": " + msg);
 }
 
-
-std::string ConfigParser::getNextToken() {
+std::string ConfigParser::getNextToken(void) {
 	std::string token;
 
 	while (_pos < _src.size()) {
@@ -81,7 +80,7 @@ void ConfigParser::expect(const std::string& token) {
 	_curr = getNextToken();
 }
 
-std::vector<std::string> ConfigParser::consumeMethodList() {
+std::vector<std::string> ConfigParser::consumeMethodList(void) {
 	std::vector<std::string> methods;
 
 	while (!_curr.empty() && _curr != ";") {
@@ -248,7 +247,7 @@ void ConfigParser::parseLocation(ServerConfig& srv, const std::string& parentPat
 	srv.locations.push_back(inherited);
 }
 
-ServerConfig ConfigParser::parseServer() {
+ServerConfig ConfigParser::parseServer(void) {
 	_curr = getNextToken(); // skip the 'server' directive
 	expect("{");
 
@@ -285,7 +284,7 @@ ServerConfig ConfigParser::parseServer() {
 	return srv;
 }
 
-std::vector<ServerConfig> ConfigParser::parse() {
+std::vector<ServerConfig> ConfigParser::parse(void) {
 	std::vector<ServerConfig> servers;
 
 	_curr = getNextToken();
