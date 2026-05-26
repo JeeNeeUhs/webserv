@@ -2,6 +2,9 @@
 #include "Logger.hpp"
 #include "utils.hpp"
 #include "webserv.hpp"
+#include "HTTPRequest.hpp"
+#include "HTTPResponse.hpp"
+#include "HTTPParser.hpp"
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -66,18 +69,22 @@ void ServerManager::checkTimeouts(void) {
 	for (it = _connections.begin(); it != _connections.end(); ++it) {
 		Connection& c = it->second;
 
-		if (c.state == CONN_TIMEOUT)
-			continue;
-
-		bool headerTimeout = (c.state == READING_HEADERS
-			&& (now - c.connStart > static_cast<time_t>(c.config->clientHeaderTimeout)));
-		bool bodyTimeout = (c.state == READING_BODY
-			&& (now - c.lastActivity > static_cast<time_t>(c.config->clientBodyTimeout)));
-		bool sendTimeout = (c.state == CONN_DONE
-			&& (now - c.lastActivity > static_cast<time_t>(c.config->clientBodyTimeout)));
-
-		if (headerTimeout || bodyTimeout || sendTimeout)
- 			c.state = CONN_TIMEOUT;
+		switch (c.state) {
+			case READING_HEADERS:
+				if (now - c.connStart > c.config->clientHeaderTimeout)
+					c.state = HEADER_TIMEOUT;
+				break;
+			case READING_BODY:
+				if (now - c.lastActivity > c.config->clientBodyTimeout)
+					c.state = BODY_TIMEOUT;
+				break;
+			case CONN_DONE:
+				if (now - c.lastActivity > c.config->clientBodyTimeout)
+					c.state = SEND_TIMEOUT;
+				break;
+			default:
+				break;
+		}
 	}
 }
 
@@ -88,7 +95,7 @@ void ServerManager::acceptClients(int listenFd) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
 			if (errno == EMFILE || errno == ENFILE) {
-				Logger::warning("reached max fd limit, deferring accept...");
+				Logger::warning("reached max fd limit, deferring accept()...");
 				break;
 			}
 
@@ -114,11 +121,11 @@ void ServerManager::acceptClients(int listenFd) {
 	}
 }
 
-
 bool ServerManager::sendToClient(int fd, Connection& c) {
 	if (c.writeBuff.empty())
 		return false;
 
+	// TODO: MSG_NOSIGNAL
 	int bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), 0);
 
 	if (bytes > 0) {
@@ -126,15 +133,76 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 
 		if (c.writeBuff.empty()) {
 			Logger::debug("fd " + utils::toString(fd) + " response sent");
-
 			return false;
 		}
 
 		return true;
 	}
 
-	Logger::debug("fd " + utils::toString(fd) + " send error");
-	return false;
+	return true;
+}
+
+bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c) {
+	HTTPResponse res;
+
+	res.setStatusCode(c.statusCode);
+	res.addHeader("Connection", "close");
+	res.addHeader("Content-Type", "text/plain");
+	res.setBody(utils::toString(c.statusCode) + " error\n");
+
+	c.writeBuff = res.serialize();
+	c.state = CONN_DONE;
+	c.lastActivity = std::time(NULL);
+	pfd.events = POLLOUT;
+
+	return true;
+}
+
+bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
+	if (c.state == READING_HEADERS) {
+		if (c.readBuff.size() > c.config->clientMaxHeaderSize) {
+			c.statusCode = 413;
+			return setErrorResponse(pfd, c);
+		}
+
+		std::size_t headerEnd = HTTPParser::findHeaderEnd(c.readBuff);
+		if (headerEnd == std::string::npos)
+			return true;
+
+		c.headerLength = headerEnd;
+		c.state = READING_BODY;
+	}
+
+	if (c.state == READING_BODY) {
+		if (c.readBuff.size() - c.headerLength > c.config->clientMaxBodySize) {
+			c.statusCode = 413;
+			return setErrorResponse(pfd, c);
+		}
+
+		HTTPParser::RequestStatus status = HTTPParser::checkComplete(c.readBuff, c.headerLength);
+		HTTPRequest req;
+
+		if (status == HTTPParser::REQ_INCOMPLETE)
+			return true;
+		else if (status == HTTPParser::REQ_BAD || !req.parse(c.readBuff, c.headerLength)) {
+			c.statusCode = 400;
+			return setErrorResponse(pfd, c);
+		}
+		// c.req = req;
+
+		// TODO: implement routing
+		HTTPResponse res;
+		res.setStatusCode(200);
+		res.addHeader("Content-Type", "text/plain");
+		res.addHeader("Connection", "close");
+		res.setBody("webserv online panpa");
+		c.writeBuff = res.serialize();
+
+		c.state = CONN_DONE;
+		pfd.events = POLLOUT;
+	}
+
+	return true;
 }
 
 bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
@@ -144,58 +212,20 @@ bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 		int bytes = recv(pfd.fd, chunk, sizeof(chunk), 0);
 
 		if (bytes > 0) {
-			const ServerConfig* cfg = c.config;
-			size_t total = c.readBuff.size() + static_cast<size_t>(bytes);
-
-			if (c.state == READING_HEADERS && total > cfg->clientMaxHeaderSize) {
-				return false; // TODO: 431 response
-			} else if (c.state == READING_BODY) {
-				size_t bodySize = total - c.headerLength;
-
-				if (bodySize > c.contentLength || bodySize > cfg->clientMaxBodySize)
-					return false; // TODO: 413 response
-			}
+			size_t buffSize = c.readBuff.size() + bytes;
+			size_t maxSize = c.config->clientMaxHeaderSize + c.config->clientMaxBodySize;
+			if (buffSize > maxSize)
+				break;
 
 			c.readBuff.append(chunk, bytes);
 		} else if (bytes == 0) {
-			Logger::debug("fd " + utils::toString(pfd.fd) + "closed connection (EOF)");
+			Logger::debug("fd " + utils::toString(pfd.fd) + " closed connection (eof)");
 			return false;
 		} else
 			break;
 	}
 
-	if (c.state == READING_HEADERS) {
-		size_t pos = c.readBuff.find("\r\n\r\n");
-
-		if (pos != std::string::npos) {
-			c.headerLength = pos + 4;
-			c.state = READING_BODY;
-
-			// TODO: header parsing
-		}
-	}
-
-	if (c.state == READING_BODY) {
-		size_t bodySize = c.readBuff.size() - c.headerLength;
-
-		if (bodySize >= c.contentLength) {
-			c.state = CONN_DONE;
-
-			c.writeBuff =
-				"HTTP/1.1 200 OK\r\n"
-				"Content-Type: text/plain\r\n"
-				"Content-Length: 12\r\n"
-				"Connection: close\r\n"
-				"\r\n"
-				"Hello World!";
-
-			pfd.events = POLLOUT;
-		}
-
-		// TODO: prep http response
-	}
-
-	return true;
+	return processBuffer(pfd, c);
 }
 
 bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
@@ -205,13 +235,13 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 
 	Connection& c = it->second;
 	
-	// RST packet, hang up cases
-	if (revents & (POLLERR | POLLHUP | POLLNVAL)) {
+	// RST packet, connection reset cases
+	if (revents & (POLLERR | POLLNVAL)) {
 		Logger::debug("fd " + utils::toString(pfd.fd) + " hung up");
 		return false;
 	}
 
-	if (revents & POLLIN) {
+	if (revents & (POLLIN | POLLHUP)) {
 		if (!readFromClient(pfd, c))
 			return false;
 		c.lastActivity = std::time(NULL);
@@ -227,6 +257,8 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 }
 
 void ServerManager::setup(void) {
+	std::ostringstream listens;
+
 	for (size_t i = 0; i < _configs.size(); ++i) {
 		const ServerConfig& cfg = _configs[i];
 
@@ -242,10 +274,11 @@ void ServerManager::setup(void) {
 			_listeners[lFd] = l;
 			addPollFd(lFd, POLLIN);
 
-			Logger::info("listening on "
-				+ host + ":" + utils::toString(port) + ", fd: " + utils::toString(lFd));
+			listens << host << ":" << utils::toString(port) << " ";
 		}
 	}
+
+	Logger::info("listening on " + listens.str());
 }
 
 void ServerManager::run(void) {
@@ -270,22 +303,29 @@ void ServerManager::run(void) {
 			if (_listeners.find(pfd.fd) != _listeners.end()) {
 				if (pfd.revents & POLLIN)
 					acceptClients(pfd.fd);
-				pfd.revents = 0;
 				continue;
 			}
 
 			// clear timed out client connections
 			std::map<int, Connection>::iterator it = _connections.find(pfd.fd);
-			if (it != _connections.end() && it->second.state == CONN_TIMEOUT) {
-				Logger::debug("fd " + utils::toString(pfd.fd) + " timed out");
-
-				close(pfd.fd);
-				_connections.erase(it);
-				pfd.fd = -1;
-
-				continue;
+			if (it != _connections.end()) {
+				switch (it->second.state) {
+					case HEADER_TIMEOUT:
+					case BODY_TIMEOUT:
+						it->second.statusCode = 408;
+						setErrorResponse(pfd, it->second);
+						continue;
+					case SEND_TIMEOUT:
+						close(pfd.fd);
+						_connections.erase(it);
+						pfd.fd = -1;
+						continue;
+					default:
+						break;
+				}
 			}
 
+			// there is no event to handle, skip for now
 			if (pfd.revents == 0)
 				continue;
 
@@ -295,8 +335,6 @@ void ServerManager::run(void) {
 				_connections.erase(pfd.fd);
 				pfd.fd = -1;
 			}
-
-			pfd.revents = 0;
 		}
 
 		clearPollSet();

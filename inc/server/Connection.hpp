@@ -8,9 +8,11 @@
 enum ConnState {
 	READING_HEADERS,
 	READING_BODY,
-	// WRITING_BODY,
-	// PROCESSING,
-	CONN_TIMEOUT,
+
+	HEADER_TIMEOUT,
+	BODY_TIMEOUT,
+	SEND_TIMEOUT,
+
 	CONN_DONE
 };
 
@@ -23,11 +25,13 @@ struct Connection {
 	std::time_t	connStart;
 	std::time_t	lastActivity;
 
+	size_t headerLength;
 	std::string	readBuff;
 	std::string	writeBuff;
+	// HTTPRequest	req;
+	// HTTPResponse	res;
 
-	size_t	headerLength;
-	size_t	contentLength;
+	size_t statusCode;
 
 	Connection()
 		: listenFd(-1),
@@ -36,7 +40,7 @@ struct Connection {
 		connStart(0),
 		lastActivity(0),
 		headerLength(0),
-		contentLength(0) {}
+		statusCode(0) {}
 };
 
 #endif

@@ -36,10 +36,11 @@
 *.exe
 *.out
 *.app
-webserv
 
 # debug information files
 *.dwo
 
 # Project-specific files
 build/
+webserv
+webserv_tester

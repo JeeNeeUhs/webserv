@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <cstring>
 
 Listener::Listener()
 	: _fd(-1), _host(""), _port(0) {}

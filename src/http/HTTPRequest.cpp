@@ -1,6 +1,6 @@
 #include "HTTPRequest.hpp"
-#include <cstdlib>
-#include <cctype>
+#include "HTTPParser.hpp"
+#include "utils.hpp"
 
 HTTPRequest::HTTPRequest() {}
 
@@ -12,12 +12,14 @@ HTTPRequest& HTTPRequest::operator=(const HTTPRequest& other) {
 	if (this != &other) {
 		_method = other._method;
 		_path = other._path;
+		_query = other._query;
 		_protocol = other._protocol;
 		_version = other._version;
 		_queries = other._queries;
 		_headers = other._headers;
 		_body = other._body;
 	}
+
 	return *this;
 }
 
@@ -29,6 +31,10 @@ const std::string& HTTPRequest::getMethod() const {
 
 const std::string& HTTPRequest::getPath() const {
 	return _path;
+}
+
+const std::string& HTTPRequest::getQuery() const {
+	return _query;
 }
 
 const std::string& HTTPRequest::getProtocol() const {
@@ -56,16 +62,18 @@ std::string HTTPRequest::getHeader(const std::string& key) const {
 	if (it != _headers.end())
 		return it->second;
 
-	std::string lowerKey = safeToLower(key);
+	std::string lowerKey = HTTPParser::toLower(key);
 	for (it = _headers.begin(); it != _headers.end(); ++it) {
-		if (safeToLower(it->first) == lowerKey)
+		if (HTTPParser::toLower(it->first) == lowerKey)
 			return it->second;
 	}
+
 	return "";
 }
 
-void HTTPRequest::_parseQueryString(const std::string& queryStr) {
+void HTTPRequest::parseQueryString(const std::string& queryStr) {
 	size_t pos = 0;
+
 	while (pos <= queryStr.size()) {
 		size_t ampPos = queryStr.find('&', pos);
 		if (ampPos == std::string::npos)
@@ -74,11 +82,10 @@ void HTTPRequest::_parseQueryString(const std::string& queryStr) {
 		std::string pair = queryStr.substr(pos, ampPos - pos);
 		if (!pair.empty()) {
 			size_t eqPos = pair.find('=');
-			if (eqPos != std::string::npos) {
-				_queries[urlDecode(pair.substr(0, eqPos))] = urlDecode(pair.substr(eqPos + 1));
-			} else {
-				_queries[urlDecode(pair)] = "";
-			}
+			if (eqPos != std::string::npos)
+				_queries[HTTPParser::urlDecode(pair.substr(0, eqPos))] = HTTPParser::urlDecode(pair.substr(eqPos + 1));
+			else
+				_queries[HTTPParser::urlDecode(pair)] = "";
 		}
 		if (ampPos == queryStr.size())
 			break;
@@ -86,38 +93,45 @@ void HTTPRequest::_parseQueryString(const std::string& queryStr) {
 	}
 }
 
-bool HTTPRequest::parse(const std::string& rawRequest) {
+bool HTTPRequest::parse(const std::string& rawRequest, size_t headerEnd) {
 	_method.clear();
 	_path.clear();
+	_query.clear();
 	_protocol.clear();
 	_version.clear();
 	_queries.clear();
 	_headers.clear();
 	_body.clear();
 
-	size_t headerEnd = rawRequest.find("\r\n\r\n");
-	if (headerEnd == std::string::npos)
+	// headerEnd "\r\n\r\n" + 4
+	if (headerEnd < 4 || headerEnd > rawRequest.size())
 		return false;
 
+	size_t headerBlockEnd = headerEnd - 4;
 	size_t lineEnd = rawRequest.find("\r\n");
-	if (lineEnd == std::string::npos || lineEnd > headerEnd)
+
+	if (lineEnd == std::string::npos || lineEnd > headerBlockEnd)
 		return false;
 
-	if (!parseRequestLine(rawRequest.substr(0, lineEnd), _method, _path, _protocol, _version))
+	if (!HTTPParser::parseRequestLine(rawRequest.substr(0, lineEnd),
+		_method, _query, _path, _protocol, _version))
 		return false;
 
-	std::string rawHeaders = rawRequest.substr(lineEnd + 2, headerEnd - lineEnd - 2);
-	if (!parseHeaders(rawHeaders, _headers))
+	std::string rawHeaders = rawRequest.substr(lineEnd + 2, headerBlockEnd - (lineEnd + 2) + 2);
+	if (!HTTPParser::parseHeaders(rawHeaders, _headers))
 		return false;
 
-	std::string rawBody = rawRequest.substr(headerEnd + 4);
+	if (!_query.empty())
+		parseQueryString(_query);
 
-	parseBody(rawBody, _headers, _body);
+	std::string rawBody = rawRequest.substr(headerEnd);
+	if (!HTTPParser::parseBody(rawBody, _headers, _body))
+		return false;
 
 	return validate();
 }
 
-bool HTTPRequest::validate() const {
+bool HTTPRequest::validate(void) const {
 	if (_method != "GET" && _method != "POST" && _method != "DELETE")
 		return false;
 
@@ -130,35 +144,20 @@ bool HTTPRequest::validate() const {
 	if (_version != "1.0" && _version != "1.1")
 		return false;
 
-	if (getHeader("Host").empty())
+	// if (getHeader("Host").empty())
+		// return false;
+
+	std::string clHeader = getHeader("Content-Length");
+	bool isChunked = HTTPParser::toLower(getHeader("Transfer-Encoding")) == "chunked";
+	bool hasLength = !clHeader.empty();
+
+	if (hasLength && isChunked)
 		return false;
 
 	if (_method == "POST") {
-		bool hasLength = !getHeader("Content-Length").empty();
-		bool isChunked = safeToLower(getHeader("Transfer-Encoding")) == "chunked";
 		if (!hasLength && !isChunked)
 			return false;
 	}
 
 	return true;
-}
-
-void HTTPRequest::fill1() {
-	_method = "GET";
-	_path = "/test";
-	_protocol = "HTTP";
-	_version = "1.1";
-	_queries["name"] = "value";
-	_headers["Content-Type"] = "text/html";
-	_headers["Host"] = "localhost";
-}
-
-void HTTPRequest::fill2() {
-	_method = "GET";
-	_path = "/cgi-index";
-	_protocol = "HTTP";
-	_version = "1.1";
-	_queries["name"] = "value";
-	_headers["Content-Type"] = "text/html";
-	_headers["Host"] = "localhost";
 }
