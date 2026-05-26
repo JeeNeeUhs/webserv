@@ -49,11 +49,11 @@ int main(int argc, char *argv[]) {
 		Config config(configPath);
 		config.load();
 
-		const std::vector<ServerConfig>& configs = config.getServers();
+		const std::vector<ServerConfig>& servers = config.getServers();
 
-		Logger::info("loaded config with " + utils::toString(configs.size()) + " server block(s)");
+		Logger::info("loaded config with " + utils::toString(servers.size()) + " server block(s)");
 
-		ServerManager manager(configs);
+		ServerManager manager(servers);
 		manager.setup();
 		manager.run();
 	} catch (const std::invalid_argument& e) {
