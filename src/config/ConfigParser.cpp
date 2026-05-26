@@ -128,7 +128,7 @@ void ConfigParser::parseLocationDirective(LocationConfig& loc, const std::string
 		if (std::find(seen.begin(), seen.end(), "redirect") != seen.end())
 			error("duplicate redirect directive in location context");
 
-		int code = utils::parseSizeT(_curr);
+		int code = utils::parseNum<size_t>(_curr);
 		std::string target = getNextToken();
 		loc.redirect = std::make_pair(code, target);
 		seen.push_back("redirect");
@@ -147,7 +147,7 @@ void ConfigParser::parseLocationDirective(LocationConfig& loc, const std::string
 		loc.cgiExtensions.push_back(_curr);
 	}
 	else if (directive == "error_page") {
-		int code = utils::parseSizeT(_curr);
+		int code = utils::parseNum<size_t>(_curr);
 		std::string page = getNextToken();
 		loc.errorPages[code] = page;
 	}
@@ -172,13 +172,13 @@ void ConfigParser::parseServerDirective(ServerConfig& srv, LocationConfig& baseL
 		// host/port splitting will be in Config::validate 
 		srv.listens.push_back(std::make_pair(_curr, 0));
 	else if (directive == "client_max_header_size")
-		srv.clientMaxHeaderSize = utils::parseSizeT(_curr);
+		srv.clientMaxHeaderSize = utils::parseNum<size_t>(_curr);
 	else if (directive == "client_max_body_size")
-		srv.clientMaxBodySize = utils::parseSizeT(_curr);
+		srv.clientMaxBodySize = utils::parseNum<size_t>(_curr);
 	else if (directive == "client_header_timeout")
-		srv.clientHeaderTimeout = utils::parseSizeT(_curr);
+		srv.clientHeaderTimeout = utils::parseNum<time_t>(_curr);
 	else if (directive == "client_body_timeout")
-		srv.clientBodyTimeout = utils::parseSizeT(_curr);
+		srv.clientBodyTimeout = utils::parseNum<time_t>(_curr);
 	else if (directive == "root") {
 		srv.root = _curr;
 		baseLoc.root = _curr;
@@ -198,7 +198,7 @@ void ConfigParser::parseServerDirective(ServerConfig& srv, LocationConfig& baseL
 		baseLoc.cgiExtensions.push_back(_curr);
 	}
 	else if (directive == "error_page") {
-		int code = utils::parseSizeT(_curr);
+		int code = utils::parseNum<size_t>(_curr);
 		std::string page = getNextToken();
 		srv.errorPages[code] = page;
 		baseLoc.errorPages[code] = page;

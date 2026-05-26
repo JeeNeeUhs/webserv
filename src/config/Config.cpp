@@ -48,7 +48,7 @@ void Config::validateListens(ServerConfig& srv, std::set<std::pair<std::string, 
 		if (host.empty())
 			host = defaults::DEFAULT_HOST;
 
-		int port = utils::parseSizeT(portStr);
+		int port = utils::parseNum<size_t>(portStr);
 		if (port < 1 || port > 65535)
 			throw std::runtime_error("invalid port for listen directive: " + portStr);
 
