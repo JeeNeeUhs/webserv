@@ -16,7 +16,7 @@ class Listener {
 
 	public:
 		Listener();
-		Listener(const std::string& host, int port);
+		Listener(const ServerConfig* config, const std::string& host, int port);
 		Listener(const Listener& other);
 		Listener& operator=(const Listener& other);
 		~Listener();
@@ -28,7 +28,6 @@ class Listener {
 
 		void open(void);
 		void close(void);
-		void setConfig(const ServerConfig* cfg);
 };
 
 #endif

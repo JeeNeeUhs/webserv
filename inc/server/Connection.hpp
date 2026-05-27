@@ -2,6 +2,8 @@
 # define CONNECTION_HPP
 
 # include "ConfigTypes.hpp"
+# include "HTTPRequest.hpp"
+# include "HTTPResponse.hpp"
 
 # include <string>
 
@@ -25,11 +27,11 @@ struct Connection {
 	std::time_t	connStart;
 	std::time_t	lastActivity;
 
-	size_t headerLength;
-	std::string	readBuff;
-	std::string	writeBuff;
-	// HTTPRequest	req;
-	// HTTPResponse	res;
+	size_t			headerLength;
+	std::string		readBuff;
+	std::string		writeBuff;
+	HTTPRequest		req;
+	HTTPResponse	res;
 
 	size_t statusCode;
 

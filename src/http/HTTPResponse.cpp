@@ -66,6 +66,9 @@ std::string HTTPResponse::serialize(void) {
 
 	if (_headers.find("Content-Length") == _headers.end())
 		addHeader("Content-Length", utils::toString(_body.size()));
+	// there is no keep-alive support
+	if (_headers.find("Connection") == _headers.end())
+		addHeader("Connection", "close");
 
 	std::map<std::string, std::string>::const_iterator it;
 	for (it = _headers.begin(); it != _headers.end(); ++it)

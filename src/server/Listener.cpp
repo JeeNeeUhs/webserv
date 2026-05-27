@@ -10,10 +10,10 @@
 #include <cstring>
 
 Listener::Listener()
-	: _fd(-1), _host(""), _port(0) {}
+	: _config(NULL), _fd(-1), _host(""), _port(0) {}
 
-Listener::Listener(const std::string& host, int port)
-	: _fd(-1), _host(host), _port(port) {}
+Listener::Listener(const ServerConfig* config, const std::string& host, int port)
+	: _config(config), _fd(-1), _host(host), _port(port) {}
 
 Listener::Listener(const Listener& other) {
 	operator=(other);
@@ -26,6 +26,7 @@ Listener& Listener::operator=(const Listener& other) {
 		_port = other._port;
 		_config = other._config;
 	}
+
 	return *this;
 }
 
@@ -82,8 +83,4 @@ void Listener::close() {
 		::close(_fd);
 		_fd = -1;
 	}
-}
-
-void Listener::setConfig(const ServerConfig* cfg) {
-	_config = cfg;
 }

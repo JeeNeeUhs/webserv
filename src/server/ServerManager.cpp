@@ -2,8 +2,6 @@
 #include "Logger.hpp"
 #include "utils.hpp"
 #include "webserv.hpp"
-#include "HTTPRequest.hpp"
-#include "HTTPResponse.hpp"
 #include "HTTPParser.hpp"
 
 #include <unistd.h>
@@ -143,14 +141,12 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 }
 
 bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c) {
-	HTTPResponse res;
+	c.res.setStatusCode(c.statusCode);
+	c.res.addHeader("Connection", "close");
+	c.res.addHeader("Content-Type", "text/plain");
+	c.res.setBody(utils::toString(c.statusCode) + " error\n");
 
-	res.setStatusCode(c.statusCode);
-	res.addHeader("Connection", "close");
-	res.addHeader("Content-Type", "text/plain");
-	res.setBody(utils::toString(c.statusCode) + " error\n");
-
-	c.writeBuff = res.serialize();
+	c.writeBuff = c.res.serialize();
 	c.state = CONN_DONE;
 	c.lastActivity = std::time(NULL);
 	pfd.events = POLLOUT;
@@ -161,7 +157,7 @@ bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c) {
 bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	if (c.state == READING_HEADERS) {
 		if (c.readBuff.size() > c.config->clientMaxHeaderSize) {
-			c.statusCode = 413;
+			c.statusCode = 431;
 			return setErrorResponse(pfd, c);
 		}
 
@@ -180,23 +176,19 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		}
 
 		HTTPParser::RequestStatus status = HTTPParser::checkComplete(c.readBuff, c.headerLength);
-		HTTPRequest req;
-
 		if (status == HTTPParser::REQ_INCOMPLETE)
 			return true;
-		else if (status == HTTPParser::REQ_BAD || !req.parse(c.readBuff, c.headerLength)) {
+		else if (status == HTTPParser::REQ_BAD || !c.req.parse(c.readBuff, c.headerLength)) {
 			c.statusCode = 400;
 			return setErrorResponse(pfd, c);
 		}
-		// c.req = req;
 
 		// TODO: implement routing
-		HTTPResponse res;
-		res.setStatusCode(200);
-		res.addHeader("Content-Type", "text/plain");
-		res.addHeader("Connection", "close");
-		res.setBody("webserv online panpa");
-		c.writeBuff = res.serialize();
+		c.res.setStatusCode(200);
+		c.res.addHeader("Content-Type", "text/plain");
+		c.res.addHeader("Connection", "close");
+		c.res.setBody("webserv online panpa");
+		c.writeBuff = c.res.serialize();
 
 		c.state = CONN_DONE;
 		pfd.events = POLLOUT;
@@ -260,14 +252,13 @@ void ServerManager::setup(void) {
 	std::ostringstream listens;
 
 	for (size_t i = 0; i < _servers.size(); ++i) {
-		const ServerConfig& cfg = _servers[i];
+		const ServerConfig& config = _servers[i];
 
-		for (size_t j = 0; j < cfg.listens.size(); ++j) {
-			const std::string& host = cfg.listens[j].first;
-			int port = cfg.listens[j].second;
+		for (size_t j = 0; j < config.listens.size(); ++j) {
+			const std::string& host = config.listens[j].first;
+			int port = config.listens[j].second;
 
-			Listener l(host, port);
-			l.setConfig(&cfg);
+			Listener l(&config, host, port);
 			l.open();
 
 			int lFd = l.getFd();
