@@ -5,6 +5,7 @@
 #include "HTTPParser.hpp"
 #include "RequestHandler.hpp"
 
+#include <iostream>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <fcntl.h>

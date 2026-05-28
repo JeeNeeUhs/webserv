@@ -12,6 +12,7 @@ HTTPResponse::HTTPResponse(const HTTPResponse& other) {
 
 HTTPResponse& HTTPResponse::operator=(const HTTPResponse& other) {
 	if (this != &other) {
+		_version = other._version;
 		_statusCode = other._statusCode;
 		_reasonPhrase = other._reasonPhrase;
 		_headers = other._headers;
