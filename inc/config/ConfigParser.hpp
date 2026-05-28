@@ -14,9 +14,9 @@ class ConfigParser {
 		void expect(const std::string& token);
 
 		ServerConfig parseServer(void);
-		void	parseLocation(ServerConfig& srv, const std::string& parentPath, LocationConfig inherited);
-		void	parseServerDirective(ServerConfig& srv, LocationConfig& baseLoc, const std::string& directive);
-		void	parseLocationDirective(LocationConfig& loc, const std::string& directive, std::vector<std::string>& seen);
+		void parseLocation(ServerConfig& srv, const std::string& parentPath, LocationConfig inherited);
+		void parseServerDirective(ServerConfig& srv, LocationConfig& baseLoc, const std::string& directive);
+		void parseLocationDirective(LocationConfig& loc, const std::string& directive, std::vector<std::string>& seen);
 
 		std::vector<std::string> consumeMethodList(void);
 		void error(const std::string& msg) const;

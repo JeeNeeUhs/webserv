@@ -17,7 +17,7 @@ namespace defaults {
 	const size_t		CLIENT_MAX_HEADER_SIZE	= 8 * 1024;		// 8 KB
 	const time_t		CLIENT_HEADER_TIMEOUT	= 60;			// seconds
 	const time_t		CLIENT_BODY_TIMEOUT		= 60;			// seconds
-	const std::string	DEFAULT_ROOT			= ".";
+	const std::string	DEFAULT_ROOT			= "/tmp/webserv";
 	const std::string	DEFAULT_INDEX			= "index.html";
 	const std::string	DEFAULT_HOST			= "0.0.0.0";
 }

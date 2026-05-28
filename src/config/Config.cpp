@@ -72,14 +72,6 @@ void Config::applyDefaults(ServerConfig& srv) {
 		srv.root = defaults::DEFAULT_ROOT;
 	if (srv.index.empty())
 		srv.index = defaults::DEFAULT_INDEX;
-	if (srv.clientMaxBodySize == 0)
-		srv.clientMaxBodySize = defaults::CLIENT_MAX_BODY_SIZE;
-	if (srv.clientMaxHeaderSize == 0)
-		srv.clientMaxHeaderSize = defaults::CLIENT_MAX_HEADER_SIZE;
-	if (srv.clientHeaderTimeout == 0)
-		srv.clientHeaderTimeout = defaults::CLIENT_HEADER_TIMEOUT;
-	if (srv.clientBodyTimeout == 0)
-		srv.clientBodyTimeout = defaults::CLIENT_BODY_TIMEOUT;
 
 	for (size_t i = 0; i < srv.locations.size(); ++i) {
 		LocationConfig& loc = srv.locations[i];

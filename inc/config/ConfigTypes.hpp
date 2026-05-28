@@ -1,6 +1,8 @@
 #ifndef CONFIG_TYPES_HPP
 # define CONFIG_TYPES_HPP
 
+# include "webserv.hpp"
+
 # include <string>
 # include <vector>
 # include <map>
@@ -42,10 +44,12 @@ struct ServerConfig {
 	std::vector<LocationConfig>	locations;
 
 	ServerConfig()
-		: clientMaxHeaderSize(0),
-		clientMaxBodySize(0),
-		clientHeaderTimeout(0),
-		clientBodyTimeout(0),
+		: clientMaxHeaderSize(defaults::CLIENT_MAX_HEADER_SIZE),
+		clientMaxBodySize(defaults::CLIENT_MAX_BODY_SIZE),
+		clientHeaderTimeout(defaults::CLIENT_HEADER_TIMEOUT),
+		clientBodyTimeout(defaults::CLIENT_BODY_TIMEOUT),
+		root(defaults::DEFAULT_ROOT),
+		index(defaults::DEFAULT_INDEX),
 		autoindex(false) {}
 };
 
