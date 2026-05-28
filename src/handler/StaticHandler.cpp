@@ -5,30 +5,13 @@
 #include <fstream>
 #include <sstream>
 
-StaticHandler::StaticHandler() : _config(NULL) {}
-
-StaticHandler::StaticHandler(const ServerConfig* config) : _config(config) {}
-
-StaticHandler::StaticHandler(const StaticHandler& other) {
-	operator=(other);
-}
-
-StaticHandler& StaticHandler::operator=(const StaticHandler& other) {
-	if (this != &other)
-		_config = other._config;
-
-	return *this;
-}
-
-StaticHandler::~StaticHandler() {}
-
-bool StaticHandler::pathExists(const std::string& path) {
+static bool pathExists(const std::string& path) {
 	struct stat st;
 
 	return stat(path.c_str(), &st) == 0;
 }
  
-bool StaticHandler::isDirectory(const std::string& path) {
+static bool isDirectory(const std::string& path) {
 	struct stat st;
 	if (stat(path.c_str(), &st) != 0)
 		return false;
@@ -36,7 +19,7 @@ bool StaticHandler::isDirectory(const std::string& path) {
 	return S_ISDIR(st.st_mode);
 }
 
-std::string StaticHandler::mimeType(const std::string& path) {
+static std::string mimeType(const std::string& path) {
 	size_t dot = path.rfind('.');
 	if (dot == std::string::npos)
 		return "application/octet-stream";
@@ -75,7 +58,7 @@ std::string StaticHandler::mimeType(const std::string& path) {
 	return "application/octet-stream";
 }
 
-HTTPResponse StaticHandler::autoindex(const std::string& filePath, const std::string& requestPath) {
+static HTTPResponse autoindex(const std::string& filePath, const std::string& requestPath) {
 	DIR* dir = opendir(filePath.c_str());
 	if (!dir) {
 		HTTPResponse res;
@@ -114,11 +97,11 @@ HTTPResponse StaticHandler::autoindex(const std::string& filePath, const std::st
 	return res;
 }
 
-HTTPResponse StaticHandler::serveFile(const std::string& filePath) {
+static HTTPResponse serveFile(const std::string& filePath, const LocationConfig* loc) {
 	// open as binary, not regular text mode
 	std::ifstream f(filePath.c_str(), std::ios::binary);
 	if (!f.is_open())
-		return buildErrorResponse(_config, 403);
+		return buildErrorResponse(loc, 403);
  
 	std::ostringstream ss;
 	ss << f.rdbuf();
@@ -131,29 +114,29 @@ HTTPResponse StaticHandler::serveFile(const std::string& filePath) {
 	return res;
 }
 
-HTTPResponse StaticHandler::serveDirectory(const std::string& filePath, const std::string& requestPath,
-	const LocationConfig& loc) { 
-	if (!loc.index.empty()) {
+static HTTPResponse serveDirectory(const std::string& filePath, const std::string& requestPath,
+	const LocationConfig* loc) { 
+	if (!loc->index.empty()) {
 		std::string indexPath = filePath;
 
 		if (indexPath[indexPath.size() - 1] != '/')
 			indexPath += '/';
-		indexPath += loc.index;
+		indexPath += loc->index;
  
 		if (pathExists(indexPath))
-			return serveFile(indexPath);
+			return serveFile(indexPath, loc);
 	}
 
-	if (loc.autoindex)
+	if (loc->autoindex)
 		return autoindex(filePath, requestPath);
  
-	return buildErrorResponse(_config, 403);
+	return buildErrorResponse(loc, 403);
 }
 
-HTTPResponse StaticHandler::handleGet(const std::string& filePath, const std::string& requestPath,
-	const LocationConfig& loc) {
+HTTPResponse StaticHandler::handleGet(const LocationConfig* loc,
+	const std::string& filePath, const std::string& requestPath) {
 	if (!pathExists(filePath))
-		return buildErrorResponse(_config, 404);
+		return buildErrorResponse(loc, 404);
 
 	// if the path resolves to a directory but has no trailing slash, redirect to
 	// the same path with a trailing slash so that relative urls in the served
@@ -173,7 +156,7 @@ HTTPResponse StaticHandler::handleGet(const std::string& filePath, const std::st
 	else if (isDirectory(filePath))
 		return serveDirectory(filePath, requestPath, loc);
 
-	return serveFile(filePath);
+	return serveFile(filePath, loc);
 }	
 
 /*

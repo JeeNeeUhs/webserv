@@ -1,24 +1,6 @@
 #include "RequestHandler.hpp"
 #include "StaticHandler.hpp"
 
-RequestHandler::RequestHandler() : _config(NULL) {}
-
-RequestHandler::RequestHandler(const ServerConfig* config)
-	: _config(config) {}
-
-RequestHandler::RequestHandler(const RequestHandler& other) {
-	operator=(other);
-}
-
-RequestHandler& RequestHandler::operator=(const RequestHandler& other) {
-	if (this != &other)
-		_config = other._config;
-
-	return *this;
-}
-
-RequestHandler::~RequestHandler() {}
-
 // iterates all locations and returns the longest prefix of the request path.
 // config: location /, location /api, location /api/users
 // 
@@ -29,12 +11,12 @@ RequestHandler::~RequestHandler() {}
 // GET /api				-> matches with /, /api	-> chooses /api (longest one)
 // GET /api/v2			-> matches with /, /api	-> chooses /api
 // GET /api/users/42	-> mathces all of them	-> chooses /api/users
-const LocationConfig* RequestHandler::matchLocation(const std::string& path) {
+static const LocationConfig* matchLocation(const ServerConfig* s, const std::string& path) {
 	const LocationConfig* longest = NULL;
 	size_t longestLen = 0;
 
-	for (size_t i = 0; i < _config->locations.size(); ++i) {
-		const LocationConfig& loc = _config->locations[i];
+	for (size_t i = 0; i < s->locations.size(); ++i) {
+		const LocationConfig& loc = s->locations[i];
 		const std::string& locPath = loc.path;
 
 		if (path.find(locPath) != 0)
@@ -55,7 +37,7 @@ const LocationConfig* RequestHandler::matchLocation(const std::string& path) {
 	return longest;
 }
 
-bool RequestHandler::isMethodAllowed(const std::string& method, const LocationConfig& loc) {
+static bool isMethodAllowed(const std::string& method, const LocationConfig& loc) {
  	for (size_t i = 0; i < loc.methods.size(); ++i) {
 		if (loc.methods[i] == method)
 			return true;
@@ -64,7 +46,7 @@ bool RequestHandler::isMethodAllowed(const std::string& method, const LocationCo
 	return false;
 }
 
-bool RequestHandler::isCgiRequest(const std::string& path, const LocationConfig& loc) {
+static bool isCgiRequest(const std::string& path, const LocationConfig& loc) {
 	if (loc.cgiExtensions.empty())
 		return false;
  
@@ -83,7 +65,7 @@ bool RequestHandler::isCgiRequest(const std::string& path, const LocationConfig&
 
 // if URL /kapouet is rooted to /tmp/www, URL /kapouet/pouic/toto/pouet
 // will search for /tmp/www/pouic/toto/pouet
-std::string RequestHandler::resolvePath(const std::string& path, const LocationConfig& loc) {
+static std::string resolvePath(const std::string& path, const LocationConfig& loc) {
 	std::string root = loc.root;
 	if (!root.empty() && root[root.size() - 1] == '/')
 		root = root.substr(0, root.size() - 1);
@@ -91,10 +73,10 @@ std::string RequestHandler::resolvePath(const std::string& path, const LocationC
 	return root + path;
 }
 
-HTTPResponse RequestHandler::handle(const HTTPRequest& req) {
-	const LocationConfig* loc = matchLocation(req.getPath());
+HTTPResponse RequestHandler::handle(const ServerConfig* server, const HTTPRequest& req) {
+	const LocationConfig* loc = matchLocation(server, req.getPath());
 	if (!loc)
-		return buildErrorResponse(_config, 404);
+		return buildErrorResponse(server, 404);
 
 	if (loc->redirect.first != 0) {
 		HTTPResponse res;
@@ -105,20 +87,18 @@ HTTPResponse RequestHandler::handle(const HTTPRequest& req) {
 	}
 
 	if (!isMethodAllowed(req.getMethod(), *loc))
-		return buildErrorResponse(_config, 405);
+		return buildErrorResponse(loc, 405);
 
 	std::string filePath = resolvePath(req.getPath(), *loc);
 
 	if (isCgiRequest(req.getPath(), *loc)) {
 		// TODO: cgi buraya artik
-		// return cgiRun(filePath, req);
 	}
 
-	StaticHandler sHandler(_config);
 	if (req.getMethod() == "GET")
-		return sHandler.handleGet(filePath, req.getPath(), *loc);
+		return StaticHandler::handleGet(loc, filePath, req.getPath());
 	// else if (req.getMethod() == "POST")
-	// 	return sHandler.handlePost(req, *loc);
+	// 	return StaticHandler::handlePost();
  
-	return buildErrorResponse(_config, 501); // not implemented
+	return buildErrorResponse(loc, 501); // not implemented
 }

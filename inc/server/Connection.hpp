@@ -24,7 +24,6 @@ struct Connection {
 
 	const ServerConfig*	config;
 	ConnState			state;
-	RequestHandler		handler;
 
 	std::time_t	connStart;
 	std::time_t	lastActivity;

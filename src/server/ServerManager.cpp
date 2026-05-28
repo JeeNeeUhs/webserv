@@ -110,7 +110,6 @@ void ServerManager::acceptClients(int listenFd) {
 		Connection c;
 		c.listenFd = listenFd;
 		c.config = _listeners[listenFd].getConfig();
-		c.handler = RequestHandler(c.config);
 		c.connStart = std::time(NULL);
 		c.lastActivity = c.connStart;
 
@@ -182,7 +181,7 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		else if (status == HTTPParser::REQ_BAD || !c.req.parse(c.readBuff, c.headerLength))
 			return setErrorResponse(pfd, c, 400);
 
-		c.res = c.handler.handle(c.req);
+		c.res = RequestHandler::handle(c.config, c.req);
 
 		// logging
 		std::time_t now = std::time(NULL);
