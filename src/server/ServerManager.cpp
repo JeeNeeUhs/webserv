@@ -3,6 +3,7 @@
 #include "utils.hpp"
 #include "webserv.hpp"
 #include "HTTPParser.hpp"
+#include "RequestHandler.hpp"
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -108,6 +109,7 @@ void ServerManager::acceptClients(int listenFd) {
 		Connection c;
 		c.listenFd = listenFd;
 		c.config = _listeners[listenFd].getConfig();
+		c.handler = RequestHandler(c.config);
 		c.connStart = std::time(NULL);
 		c.lastActivity = c.connStart;
 
@@ -140,13 +142,15 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 	return true;
 }
 
-bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c) {
-	c.res.setStatusCode(c.statusCode);
-	c.res.addHeader("Connection", "close");
-	c.res.addHeader("Content-Type", "text/plain");
-	c.res.setBody(utils::toString(c.statusCode) + " error\n");
-
+bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c, size_t code) {
+	c.res = buildErrorResponse(c.config, code);
 	c.writeBuff = c.res.serialize();
+
+	// logging
+	std::string method = c.req.getMethod().empty() ? "-" : c.req.getMethod();
+	std::string path = c.req.getPath().empty() ? "-" : c.req.getPath();
+	Logger::info(method + " " + path + " " + utils::toString(code));
+
 	c.state = CONN_DONE;
 	c.lastActivity = std::time(NULL);
 	pfd.events = POLLOUT;
@@ -156,10 +160,8 @@ bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c) {
 
 bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	if (c.state == READING_HEADERS) {
-		if (c.readBuff.size() > c.config->clientMaxHeaderSize) {
-			c.statusCode = 431;
-			return setErrorResponse(pfd, c);
-		}
+		if (c.readBuff.size() > c.config->clientMaxHeaderSize)
+			return setErrorResponse(pfd, c, 431);
 
 		std::size_t headerEnd = HTTPParser::findHeaderEnd(c.readBuff);
 		if (headerEnd == std::string::npos)
@@ -170,26 +172,31 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	}
 
 	if (c.state == READING_BODY) {
-		if (c.readBuff.size() - c.headerLength > c.config->clientMaxBodySize) {
-			c.statusCode = 413;
-			return setErrorResponse(pfd, c);
-		}
+		if (c.readBuff.size() - c.headerLength > c.config->clientMaxBodySize)
+			return setErrorResponse(pfd, c, 413);
 
 		HTTPParser::RequestStatus status = HTTPParser::checkComplete(c.readBuff, c.headerLength);
 		if (status == HTTPParser::REQ_INCOMPLETE)
 			return true;
-		else if (status == HTTPParser::REQ_BAD || !c.req.parse(c.readBuff, c.headerLength)) {
-			c.statusCode = 400;
-			return setErrorResponse(pfd, c);
+		else if (status == HTTPParser::REQ_BAD || !c.req.parse(c.readBuff, c.headerLength))
+			return setErrorResponse(pfd, c, 400);
+
+		c.res = c.handler.handle(c.req);
+		if (c.res.getStatusCode() == 0) {
+			// TODO: cgi sekli kuzi
+			return true;
 		}
 
-		// TODO: implement routing
-		c.res.setStatusCode(200);
-		c.res.addHeader("Content-Type", "text/plain");
-		c.res.addHeader("Connection", "close");
-		c.res.setBody("webserv online panpa");
-		c.writeBuff = c.res.serialize();
+		// logging
+		std::time_t now = std::time(NULL);
+		time_t elapsed = (now - c.connStart) * 1000;
+		Logger::info(c.req.getMethod() + " "
+			+ c.req.getPath()
+			+ (c.req.getQuery().empty() ? "" : "?" + c.req.getQuery())
+			+ " " + utils::toString(c.res.getStatusCode())
+			+ " " + utils::toString(elapsed) + "ms");
 
+		c.writeBuff = c.res.serialize();
 		c.state = CONN_DONE;
 		pfd.events = POLLOUT;
 	}
@@ -303,8 +310,7 @@ void ServerManager::run(void) {
 				switch (it->second.state) {
 					case HEADER_TIMEOUT:
 					case BODY_TIMEOUT:
-						it->second.statusCode = 408;
-						setErrorResponse(pfd, it->second);
+						setErrorResponse(pfd, it->second, 408);
 						continue;
 					case SEND_TIMEOUT:
 						close(pfd.fd);

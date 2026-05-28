@@ -7,7 +7,7 @@
 class HTTPResponse {
 	private:
 		std::string _version;
-		int _statusCode;
+		size_t _statusCode;
 		std::string _reasonPhrase;
 		std::map<std::string, std::string> _headers;
 		std::string _body;
@@ -18,6 +18,7 @@ class HTTPResponse {
 		HTTPResponse& operator=(const HTTPResponse& other);
 		~HTTPResponse();
 
+		size_t getStatusCode(void) const;
 		void setStatusCode(int statusCode);
 		void addHeader(const std::string& key, const std::string& value);
 		void setBody(const std::string& body);

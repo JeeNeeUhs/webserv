@@ -23,7 +23,7 @@ HTTPResponse& HTTPResponse::operator=(const HTTPResponse& other) {
 
 HTTPResponse::~HTTPResponse() {}
 
-static std::string reasonFor(int code) {
+static std::string getReasonPhrase(int code) {
 	switch (code) {
 		case 200: return "OK";
 		case 201: return "Created";
@@ -46,10 +46,14 @@ static std::string reasonFor(int code) {
 	}
 }
 
+size_t HTTPResponse::getStatusCode(void) const {
+	return _statusCode;
+}
+
 void HTTPResponse::setStatusCode(int statusCode) {
 	_statusCode = statusCode;
 	if (_reasonPhrase.empty())
-		_reasonPhrase = reasonFor(statusCode);
+		_reasonPhrase = getReasonPhrase(statusCode);
 }
 
 void HTTPResponse::addHeader(const std::string& key, const std::string& value) {

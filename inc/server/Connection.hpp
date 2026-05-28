@@ -4,6 +4,7 @@
 # include "ConfigTypes.hpp"
 # include "HTTPRequest.hpp"
 # include "HTTPResponse.hpp"
+# include "RequestHandler.hpp"
 
 # include <string>
 
@@ -23,6 +24,7 @@ struct Connection {
 
 	const ServerConfig*	config;
 	ConnState			state;
+	RequestHandler		handler;
 
 	std::time_t	connStart;
 	std::time_t	lastActivity;
@@ -33,16 +35,13 @@ struct Connection {
 	HTTPRequest		req;
 	HTTPResponse	res;
 
-	size_t statusCode;
-
 	Connection()
 		: listenFd(-1),
 		config(NULL),
 		state(READING_HEADERS),
 		connStart(0),
 		lastActivity(0),
-		headerLength(0),
-		statusCode(0) {}
+		headerLength(0) {}
 };
 
 #endif

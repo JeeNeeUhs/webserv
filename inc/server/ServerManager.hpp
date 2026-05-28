@@ -23,8 +23,8 @@ class ServerManager {
 		bool handleClient(pollfd_t& pfd, short revents);
 		bool sendToClient(int fd, Connection& c);
 
+		bool setErrorResponse(pollfd_t& pfd, Connection& c, size_t code);
 		bool processBuffer(pollfd_t& pfd, Connection& c);
-		bool setErrorResponse(pollfd_t& pfd, Connection& c);
 		bool readFromClient(pollfd_t& pfd, Connection& c);
 
 		void addPollFd(int fd, short events);
@@ -40,5 +40,7 @@ class ServerManager {
 		void setup(void);
 		void run(void);
 };
+
+HTTPResponse buildErrorResponse(const ServerConfig* config, size_t statusCode);
 
 #endif

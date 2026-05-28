@@ -3,13 +3,14 @@ TEST_NAME	= webserv_tester
 
 BUILD_DIR	= build
 
-VPATH		= src:src/utils:src/config:src/server:src/http:test/unit
+VPATH		= src:src/utils:src/config:src/server:src/http:src/handler:test/unit
 
 SRCS		= main.cpp \
 			utils.cpp Logger.cpp \
 			Config.cpp ConfigParser.cpp \
 			ServerManager.cpp Listener.cpp \
-			HTTPResponse.cpp HTTPRequest.cpp HTTPParser.cpp
+			HTTPResponse.cpp HTTPRequest.cpp HTTPParser.cpp \
+			RequestHandler.cpp StaticHandler.cpp ErrorResponse.cpp
 TEST_SRCS	= tests.cpp test_http.cpp test_config.cpp
 
 OBJS		= $(addprefix $(BUILD_DIR)/,$(SRCS:.cpp=.o))
@@ -18,7 +19,7 @@ TEST_OBJS	= $(addprefix $(BUILD_DIR)/,$(TEST_SRCS:.cpp=.o))
 CORE_OBJS	= $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
 
 INCS		= -Iinc -Iinc/utils -Iinc/config -Iinc/server \
-			-Iinc/http
+			-Iinc/http -Iinc/handler
 
 CXX			= c++
 CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 $(INCS)
