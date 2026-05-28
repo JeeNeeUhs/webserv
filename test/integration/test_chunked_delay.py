@@ -1,12 +1,12 @@
 import socket
 import time
 
-def test_slow_chunked():
+def test_chunked_delay():
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.connect(('127.0.0.1', 8080))
 
 	print("connected to server, sending header...")
-	req = b"POST / HTTP/1.1\r\nHost: localhost:8080\r\nTransfer-Encoding: chunked\r\n\r\n"
+	req = b"POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
 	s.sendall(req)
 
 	time.sleep(1)
@@ -32,4 +32,4 @@ def test_slow_chunked():
 	s.close()
 
 if __name__ == "__main__":
-	test_slow_chunked()
+	test_chunked_delay()

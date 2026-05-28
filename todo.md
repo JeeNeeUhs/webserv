@@ -8,9 +8,12 @@
 [ ] Add more config for tests
 [ ] Write tests for multiple languages
 [ ] Create default pages with render template support (error pages, autoindex)
+[ ] Research for CGI and signal handling
+[ ] Research for cookie & session management
 
 ## refactor
 [x] Delete wildcard in Makefile and add source files manually
 [x] Change private attributes to start with an underscore
 [ ] Improve error messages
 [ ] Update status code type int to short
+[ ] Remove unused status codes
