@@ -179,7 +179,4 @@ HTTPResponse StaticHandler::handleGet(const std::string& filePath, const std::st
 /*
 HTTPResponse StaticHandler::handlePost(const HTTPRequest& req, const LocationConfig& loc) {
 }
-
-HTTPResponse StaticHandler::handleDelete(const std::string& filePath) {
-}
 */

@@ -27,7 +27,6 @@ class StaticHandler {
 		HTTPResponse handleGet(const std::string& filePath, const std::string& requestPath,
 			const LocationConfig& loc);
 		// HTTPResponse handlePost(const HTTPRequest& req, const LocationConfig& loc);
-		// HTTPResponse handleDelete(const std::string& filePath);
 };
 
 HTTPResponse buildErrorResponse(const ServerConfig* config, size_t statusCode);

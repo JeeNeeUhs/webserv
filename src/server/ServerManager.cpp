@@ -182,10 +182,6 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			return setErrorResponse(pfd, c, 400);
 
 		c.res = c.handler.handle(c.req);
-		if (c.res.getStatusCode() == 0) {
-			// TODO: cgi sekli kuzi
-			return true;
-		}
 
 		// logging
 		std::time_t now = std::time(NULL);

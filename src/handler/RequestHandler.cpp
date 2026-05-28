@@ -107,21 +107,18 @@ HTTPResponse RequestHandler::handle(const HTTPRequest& req) {
 	if (!isMethodAllowed(req.getMethod(), *loc))
 		return buildErrorResponse(_config, 405);
 
+	std::string filePath = resolvePath(req.getPath(), *loc);
+
 	if (isCgiRequest(req.getPath(), *loc)) {
-		HTTPResponse res;
-		res.setStatusCode(0);
-		return res;
+		// TODO: cgi buraya artik
+		// return cgiRun(filePath, req);
 	}
 
 	StaticHandler sHandler(_config);
-	std::string filePath = resolvePath(req.getPath(), *loc);
-
 	if (req.getMethod() == "GET")
 		return sHandler.handleGet(filePath, req.getPath(), *loc);
 	// else if (req.getMethod() == "POST")
 	// 	return sHandler.handlePost(req, *loc);
-	// else if (req.getMethod() == "DELETE")
-	// 	return sHandler.handleDelete(filePath);
  
 	return buildErrorResponse(_config, 501); // not implemented
 }
