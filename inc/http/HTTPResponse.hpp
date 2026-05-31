@@ -22,12 +22,13 @@ class HTTPResponse {
 		HTTPResponse& operator=(const HTTPResponse& other);
 		~HTTPResponse();
 
+		std::string getReasonPhrase(void) const;
 		size_t getStatusCode(void) const;
 		bool isFileBody(void) const;
 		const std::string& getFilePath(void) const;
 		size_t getFileSize(void) const;
 
-		void setStatusCode(int statusCode);
+		void setStatusCode(size_t statusCode);
 		void addHeader(const std::string& key, const std::string& value);
 		void setBody(const std::string& body);
 		void setFileBody(const std::string& path, size_t size);

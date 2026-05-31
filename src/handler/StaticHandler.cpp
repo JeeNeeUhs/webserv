@@ -54,6 +54,7 @@ static std::string mimeType(const std::string& path) {
 		return "video/mp4";
 	if (ext == ".webm")
 		return "video/webm";
+
 	return "application/octet-stream";
 }
 

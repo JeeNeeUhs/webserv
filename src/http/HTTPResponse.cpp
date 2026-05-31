@@ -27,8 +27,8 @@ HTTPResponse& HTTPResponse::operator=(const HTTPResponse& other) {
 
 HTTPResponse::~HTTPResponse() {}
 
-static std::string getReasonPhrase(int code) {
-	switch (code) {
+static std::string _getReasonPhrase(size_t statusCode) {
+	switch (statusCode) {
 		case 200: return "OK";
 		case 201: return "Created";
 		case 204: return "No Content";
@@ -50,6 +50,10 @@ static std::string getReasonPhrase(int code) {
 	}
 }
 
+std::string HTTPResponse::getReasonPhrase(void) const {
+	return _reasonPhrase;
+}
+
 size_t HTTPResponse::getStatusCode(void) const {
 	return _statusCode;
 }
@@ -66,10 +70,10 @@ size_t HTTPResponse::getFileSize(void) const {
 	return _fileSize;
 }
 
-void HTTPResponse::setStatusCode(int statusCode) {
+void HTTPResponse::setStatusCode(size_t statusCode) {
 	_statusCode = statusCode;
 	if (_reasonPhrase.empty())
-		_reasonPhrase = getReasonPhrase(statusCode);
+		_reasonPhrase = _getReasonPhrase(statusCode);
 }
 
 void HTTPResponse::addHeader(const std::string& key, const std::string& value) {
