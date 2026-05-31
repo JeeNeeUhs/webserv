@@ -36,7 +36,7 @@ class HTTPRequest {
 		const std::vector<std::string>& getHeaderValuesList(const std::string& key) const;
 		const std::string& getBody() const;
 		std::string getHeader(const std::string& key) const;
-		std::string getUnParsedRequest() const;
+		std::string getUnparsedRequest() const;
 
 		bool parse(const std::string& rawRequest, size_t headerEnd);
 };

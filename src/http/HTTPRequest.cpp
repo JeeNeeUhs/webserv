@@ -162,22 +162,22 @@ bool HTTPRequest::validate(void) const {
 	return true;
 }
 
-std::string HTTPRequest::getUnParsedRequest() const {
-	std::string request = _method + " " + _path;
-	if (!_query.empty())
-		request += "?" + _query;
-	request += " " + _protocol + "/" + _version + "\r\n";
+// std::string HTTPRequest::getUnparsedRequest() const {
+// 	std::string request = _method + " " + _path;
+// 	if (!_query.empty())
+// 		request += "?" + _query;
+// 	request += " " + _protocol + "/" + _version + "\r\n";
 
-	for (std::map<std::string, std::string>::const_iterator it = _headers.begin();
-			it != _headers.end(); ++it) {
-		request += it->first + ": " + it->second + "\r\n";
-	}
+// 	for (std::map<std::string, std::string>::const_iterator it = _headers.begin();
+// 			it != _headers.end(); ++it) {
+// 		request += it->first + ": " + it->second + "\r\n";
+// 	}
 
-	request += "\r\n" + _body;
+// 	request += "\r\n" + _body;
 
-	return request;
-}
+// 	return request;
+// }
 
-const std::vector<std::string>& HTTPRequest::getHeaderValuesList(const std::string& key) const {
-	return utils::split(getHeader(key), ',');
-}
+// const std::vector<std::string>& HTTPRequest::getHeaderValuesList(const std::string& key) const {
+// 	return utils::split(getHeader(key), ',');
+// }
