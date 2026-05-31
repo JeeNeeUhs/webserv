@@ -10,7 +10,8 @@
 # define HTTP_VERSION "1.1"
 
 # define POLL_TIMEOUT 1000 // milliseconds (3 seconds)
-# define READ_CHUNK 4096
+# define RECV_CHUNK 4 * 1024
+# define SEND_CHUNK 64 * 1024
 
 namespace defaults {
 	const size_t		CLIENT_MAX_BODY_SIZE	= 1024 * 1024;	// 1 MB

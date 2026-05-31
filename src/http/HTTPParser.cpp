@@ -32,6 +32,10 @@ namespace HTTPParser {
 		return result;
 	}
 
+	bool isChunked(const std::string& transferEncoding) {
+		return toLower(transferEncoding).find("chunked") != std::string::npos;
+	}
+
 	std::string urlDecode(const std::string& encoded) {
 		std::string decoded;
 		decoded.reserve(encoded.size());
@@ -67,11 +71,11 @@ namespace HTTPParser {
 	static std::string peekHeader(const std::string& rawHeaders, const std::string& name) {
 		std::string lower = toLower(rawHeaders);
 		std::string key = toLower(name) + ":";
-	
+
 		size_t pos = lower.find(key);
 		if (pos == std::string::npos)
 			return "";
-	
+
 		size_t valStart = pos + key.size();
 		size_t eol = rawHeaders.find("\r\n", valStart);
 		std::string raw = rawHeaders.substr(valStart,
@@ -82,24 +86,24 @@ namespace HTTPParser {
 
 	static RequestStatus chunkedStatus(const std::string& buffer, size_t from) {
 		size_t pos = from;
-	
+
 		while (pos < buffer.size()) {
 			size_t lineEnd = buffer.find("\r\n", pos);
 			if (lineEnd == std::string::npos)
 				return REQ_INCOMPLETE;
-	
+
 			std::string sizeStr = buffer.substr(pos, lineEnd - pos);
 			size_t semi = sizeStr.find(';');
 			if (semi != std::string::npos)
 				sizeStr = sizeStr.substr(0, semi);
-	
+
 			char* endPtr = NULL;
 			long chunkSize = std::strtol(sizeStr.c_str(), &endPtr, 16);
 			if (endPtr == sizeStr.c_str() || chunkSize < 0)
 				return REQ_BAD;
 			if (chunkSize == 0)
 				return REQ_COMPLETE;
-	
+
 			pos = lineEnd + 2;
 			size_t need = static_cast<size_t>(chunkSize) + 2;
 			if (pos + need > buffer.size())
@@ -113,11 +117,11 @@ namespace HTTPParser {
 
 	RequestStatus checkComplete(const std::string& buffer, std::size_t headerEnd) {
 		std::string rawHeaders = buffer.substr(0, headerEnd);
-	
+
 		std::string te = peekHeader(rawHeaders, "Transfer-Encoding");
-		if (toLower(te).find("chunked") != std::string::npos)
+		if (isChunked(te))
 			return chunkedStatus(buffer, headerEnd);
-	
+
 		std::string cl = peekHeader(rawHeaders, "Content-Length");
 		if (!cl.empty()) {
 			std::size_t len = 0;
@@ -129,57 +133,57 @@ namespace HTTPParser {
 			std::size_t bodyHave = buffer.size() - headerEnd;
 			return (bodyHave >= len) ? REQ_COMPLETE : REQ_INCOMPLETE;
 		}
-	
+
 		return REQ_COMPLETE;
 	}
 
 	bool parseChunkedBody(const std::string& raw, std::string& body) {
 		body.clear();
 		size_t pos = 0;
-	
+
 		while (pos < raw.size()) {
 			size_t lineEnd = raw.find("\r\n", pos);
 			if (lineEnd == std::string::npos)
-				break;
-	
+				return false;
+
 			std::string sizeStr = raw.substr(pos, lineEnd - pos);
 			size_t semiPos = sizeStr.find(';');
 			if (semiPos != std::string::npos)
 				sizeStr = sizeStr.substr(0, semiPos);
-	
+
 			char* endPtr = NULL;
 			long chunkSize = std::strtol(sizeStr.c_str(), &endPtr, 16);
 			if (endPtr == sizeStr.c_str() || chunkSize < 0)
 				return false;
 			if (chunkSize == 0)
-				break;
-	
+				return true;
+
 			pos = lineEnd + 2;
 			size_t uChunkSize = static_cast<size_t>(chunkSize);
 			if (pos + uChunkSize > raw.size())
-				break;
-	
+				return false;
+
 			body.append(raw, pos, uChunkSize);
 			pos += uChunkSize + 2;
 		}
 
-		return true;
+		return false;
 	}
-	
+
 	bool parseRequestLine(const std::string& line, std::string& method,
 			std::string& query, std::string& path, std::string& protocol, std::string& version) {
 		size_t firstSpace = line.find(' ');
 		if (firstSpace == std::string::npos || firstSpace == 0)
 			return false;
-	
+
 		size_t secondSpace = line.find(' ', firstSpace + 1);
 		if (secondSpace == std::string::npos || secondSpace == firstSpace + 1)
 			return false;
-	
+
 		method = line.substr(0, firstSpace);
 		std::string fullPath = line.substr(firstSpace + 1, secondSpace - firstSpace - 1);
 		std::string versionStr = trim(line.substr(secondSpace + 1));
-	
+
 		size_t queryPos = fullPath.find('?');
 		if (queryPos != std::string::npos) {
 			path = urlDecode(fullPath.substr(0, queryPos));
@@ -188,50 +192,50 @@ namespace HTTPParser {
 			path = urlDecode(fullPath);
 			query = "";
 		}
-	
+
 		size_t slashPos = versionStr.find('/');
 		if (slashPos == std::string::npos)
 			return false;
-	
+
 		protocol = versionStr.substr(0, slashPos);
 		version = versionStr.substr(slashPos + 1);
-	
+
 		return true;
 	}
-	
+
 	bool parseHeaders(const std::string& rawHeaders, std::map<std::string, std::string>& headers) {
 		size_t pos = 0;
-	
+
 		while (pos < rawHeaders.size()) {
 			size_t nextLine = rawHeaders.find("\r\n", pos);
 			if (nextLine == std::string::npos)
 				break;
-	
+
 			std::string headerLine = rawHeaders.substr(pos, nextLine - pos);
 			size_t colonPos = headerLine.find(':');
 			if (colonPos == std::string::npos)
 				return false;
-	
+
 			std::string key = trim(headerLine.substr(0, colonPos));
 			std::string value = trim(headerLine.substr(colonPos + 1));
 			if (key.empty())
 				return false;
-	
+
 			headers[key] = value;
 			pos = nextLine + 2;
 		}
 
 		return true;
 	}
-	
+
 	bool parseBody(const std::string& rawBody, const std::map<std::string, std::string>& headers,
 			std::string& body) {
 		std::string te = (headers.find("Transfer-Encoding") != headers.end())
 			? headers.find("Transfer-Encoding")->second : "";
-	
-		if (toLower(te) == "chunked")
+
+		if (isChunked(te))
 			return parseChunkedBody(rawBody, body);
-	
+
 		std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
 		if (it != headers.end()) {
 			std::size_t len = 0;

@@ -4,7 +4,6 @@
 # include "ConfigTypes.hpp"
 # include "HTTPRequest.hpp"
 # include "HTTPResponse.hpp"
-# include "RequestHandler.hpp"
 
 # include <string>
 
@@ -34,13 +33,18 @@ struct Connection {
 	HTTPRequest		req;
 	HTTPResponse	res;
 
+	int		bodyFd;
+	size_t	bodyRemaining;
+
 	Connection()
 		: listenFd(-1),
 		config(NULL),
 		state(READING_HEADERS),
 		connStart(0),
 		lastActivity(0),
-		headerLength(0) {}
+		headerLength(0),
+		bodyFd(-1),
+		bodyRemaining(0) {}
 };
 
 #endif

@@ -5,3 +5,5 @@ https://datatracker.ietf.org/doc/html/rfc2616
 https://en.wikipedia.org/wiki/Uniform_Resource_Identifier
 https://pypi.org/project/legacy-cgi/
 https://pkg.go.dev/net/http/cgi
+https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.2
+https://github.com/nginx/nginx/blob/d44205284fa41662da803b796d6056fc1e59b1f3/src/http/modules/ngx_http_static_module.c#L148

@@ -2,7 +2,6 @@
 
 #include <sys/stat.h>
 #include <dirent.h>
-#include <fstream>
 #include <sstream>
 
 static bool pathExists(const std::string& path) {
@@ -23,7 +22,7 @@ static std::string mimeType(const std::string& path) {
 	size_t dot = path.rfind('.');
 	if (dot == std::string::npos)
 		return "application/octet-stream";
- 
+
 	std::string ext = path.substr(dot);
 	if (ext == ".html" || ext == ".htm")
 		return "text/html";
@@ -58,37 +57,33 @@ static std::string mimeType(const std::string& path) {
 	return "application/octet-stream";
 }
 
-static HTTPResponse autoindex(const std::string& filePath, const std::string& requestPath) {
+static HTTPResponse autoindex(const LocationConfig& loc, const std::string& filePath, const std::string& requestPath) {
 	DIR* dir = opendir(filePath.c_str());
-	if (!dir) {
-		HTTPResponse res;
-
-		res.setStatusCode(403);
-		return res;
-	}
+	if (!dir)
+		return buildErrorResponse(loc, 403);
 
 	std::ostringstream html;
 	html << "<!DOCTYPE html><html><head><title>Index of "
 		<< requestPath << "</title></head><body>\n"
 		<< "<h1>Index of " << requestPath << "</h1><hr><pre>\n";
- 
+
 	struct dirent* entry;
 	while ((entry = readdir(dir)) != NULL) {
 		std::string name = entry->d_name;
 		if (name == ".")
 			continue;
- 
+
 		std::string href = requestPath;
-		if (href[href.size() - 1] != '/')
+		if (href.empty() || href[href.size() - 1] != '/')
 			href += '/';
 		href += name;
- 
+
 		html << "<a href=\"" << href << "\">" << name << "</a>\n";
 	}
 	closedir(dir);
- 
+
 	html << "</pre><hr></body></html>\n";
- 
+
 	HTTPResponse res;
 
 	res.setStatusCode(200);
@@ -97,44 +92,38 @@ static HTTPResponse autoindex(const std::string& filePath, const std::string& re
 	return res;
 }
 
-static HTTPResponse serveFile(const std::string& filePath, const LocationConfig* loc) {
-	// open as binary, not regular text mode
-	std::ifstream f(filePath.c_str(), std::ios::binary);
-	if (!f.is_open())
+static HTTPResponse serveFile(const LocationConfig& loc, const std::string& filePath) {
+	struct stat st;
+	if (stat(filePath.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
 		return buildErrorResponse(loc, 403);
- 
-	std::ostringstream ss;
-	ss << f.rdbuf();
- 
+
 	HTTPResponse res;
 
 	res.setStatusCode(200);
 	res.addHeader("Content-Type", mimeType(filePath));
-	res.setBody(ss.str());
+	res.setFileBody(filePath, static_cast<size_t>(st.st_size));
 	return res;
 }
 
-static HTTPResponse serveDirectory(const std::string& filePath, const std::string& requestPath,
-	const LocationConfig* loc) { 
-	if (!loc->index.empty()) {
+static HTTPResponse serveDirectory(const LocationConfig& loc, const std::string& filePath, const std::string& requestPath) {
+	if (!loc.index.empty()) {
 		std::string indexPath = filePath;
 
-		if (indexPath[indexPath.size() - 1] != '/')
+		if (indexPath.empty() || indexPath[indexPath.size() - 1] != '/')
 			indexPath += '/';
-		indexPath += loc->index;
- 
+		indexPath += loc.index;
+
 		if (pathExists(indexPath))
-			return serveFile(indexPath, loc);
+			return serveFile(loc, indexPath);
 	}
 
-	if (loc->autoindex)
-		return autoindex(filePath, requestPath);
- 
+	if (loc.autoindex)
+		return autoindex(loc, filePath, requestPath);
+
 	return buildErrorResponse(loc, 403);
 }
 
-HTTPResponse StaticHandler::handleGet(const LocationConfig* loc,
-	const std::string& filePath, const std::string& requestPath) {
+HTTPResponse StaticHandler::handleGet(const LocationConfig& loc, const std::string& filePath, const std::string& requestPath) {
 	if (!pathExists(filePath))
 		return buildErrorResponse(loc, 404);
 
@@ -145,7 +134,7 @@ HTTPResponse StaticHandler::handleGet(const LocationConfig* loc,
 	// 
 	// https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.2
 	// https://github.com/nginx/nginx/blob/d44205284fa41662da803b796d6056fc1e59b1f3/src/http/modules/ngx_http_static_module.c#L148
-	else if (isDirectory(filePath) && requestPath[requestPath.size() - 1] != '/') {
+	if (isDirectory(filePath) && (requestPath.empty() || requestPath[requestPath.size() - 1] != '/')) {
 		HTTPResponse res;
 
 		res.setStatusCode(301);
@@ -153,13 +142,8 @@ HTTPResponse StaticHandler::handleGet(const LocationConfig* loc,
 		return res;
 	}
 
-	else if (isDirectory(filePath))
-		return serveDirectory(filePath, requestPath, loc);
+	if (isDirectory(filePath))
+		return serveDirectory(loc, filePath, requestPath);
 
-	return serveFile(filePath, loc);
-}	
-
-/*
-HTTPResponse StaticHandler::handlePost(const HTTPRequest& req, const LocationConfig& loc) {
+	return serveFile(loc, filePath);
 }
-*/

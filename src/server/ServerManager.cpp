@@ -33,8 +33,11 @@ ServerManager& ServerManager::operator=(const ServerManager& other) {
 ServerManager::~ServerManager() {
 	std::map<int, Connection>::iterator it;
 
-	for (it = _connections.begin(); it != _connections.end(); ++it)
+	for (it = _connections.begin(); it != _connections.end(); ++it) {
+		if (it->second.bodyFd != -1)
+			close(it->second.bodyFd);
 		close(it->first);
+	}
 	_connections.clear();
 
 	for (size_t i = 0; i < _listeners.size(); ++i)
@@ -60,6 +63,19 @@ void ServerManager::clearPollSet(void) {
 		} else
 			++i;
 	}
+}
+
+void ServerManager::closeConnection(int& fd) {
+	std::map<int, Connection>::iterator it = _connections.find(fd);
+	if (it != _connections.end()) {
+		if (it->second.bodyFd != -1)
+			close(it->second.bodyFd);
+		
+		_connections.erase(it);
+	}
+
+	close(fd);
+	fd = -1;
 }
 
 void ServerManager::checkTimeouts(void) {
@@ -122,19 +138,33 @@ void ServerManager::acceptClients(int listenFd) {
 }
 
 bool ServerManager::sendToClient(int fd, Connection& c) {
+	if (c.writeBuff.empty() && c.bodyFd != -1) {
+		char chunkBuff[SEND_CHUNK];
+
+		size_t chunkSize = sizeof(chunkBuff);
+		if (chunkSize > c.bodyRemaining)
+			chunkSize = c.bodyRemaining;
+
+		int n = read(c.bodyFd, chunkBuff, chunkSize);
+		if (n > 0) {
+			c.writeBuff.append(chunkBuff, n);
+			c.bodyRemaining -= n;
+		}
+		if (n <= 0 || c.bodyRemaining <= 0) {
+			close(c.bodyFd);
+			c.bodyFd = -1;
+		}
+	}
+
 	if (c.writeBuff.empty())
 		return false;
 
 	// TODO: MSG_NOSIGNAL
 	int bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), 0);
-
 	if (bytes > 0) {
 		c.writeBuff.erase(0, bytes);
-
-		if (c.writeBuff.empty()) {
-			Logger::debug("fd " + utils::toString(fd) + " response sent");
+		if (c.writeBuff.empty() && c.bodyFd == -1)
 			return false;
-		}
 
 		return true;
 	}
@@ -143,7 +173,7 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 }
 
 bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c, size_t code) {
-	c.res = buildErrorResponse(c.config, code);
+	c.res = buildErrorResponse(*c.config, code);
 	c.writeBuff = c.res.serialize();
 
 	// logging
@@ -181,16 +211,22 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		else if (status == HTTPParser::REQ_BAD || !c.req.parse(c.readBuff, c.headerLength))
 			return setErrorResponse(pfd, c, 400);
 
-		c.res = RequestHandler::handle(c.config, c.req);
+		c.res = RequestHandler::handle(*c.config, c.req);
+		if (c.res.isFileBody()) {
+			c.bodyFd = open(c.res.getFilePath().c_str(), O_RDONLY);
+
+			if (c.bodyFd < 0)
+				c.res = buildErrorResponse(*c.config, 500);
+			else
+				c.bodyRemaining = c.res.getFileSize();
+		}
 
 		// logging
 		std::time_t now = std::time(NULL);
-		time_t elapsed = (now - c.connStart) * 1000;
 		Logger::info(c.req.getMethod() + " "
 			+ c.req.getPath()
 			+ (c.req.getQuery().empty() ? "" : "?" + c.req.getQuery())
-			+ " " + utils::toString(c.res.getStatusCode())
-			+ " " + utils::toString(elapsed) + "ms");
+			+ " " + utils::toString(c.res.getStatusCode()));
 
 		c.writeBuff = c.res.serialize();
 		c.state = CONN_DONE;
@@ -201,7 +237,7 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 }
 
 bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
-	char chunk[READ_CHUNK];
+	char chunk[RECV_CHUNK];
 
 	while (true) {
 		int bytes = recv(pfd.fd, chunk, sizeof(chunk), 0);
@@ -309,9 +345,7 @@ void ServerManager::run(void) {
 						setErrorResponse(pfd, it->second, 408);
 						continue;
 					case SEND_TIMEOUT:
-						close(pfd.fd);
-						_connections.erase(it);
-						pfd.fd = -1;
+						closeConnection(pfd.fd);
 						continue;
 					default:
 						break;
@@ -323,11 +357,8 @@ void ServerManager::run(void) {
 				continue;
 
 			// process the incoming connections
-			if (!handleClient(pfd, pfd.revents)) {
-				close(pfd.fd);
-				_connections.erase(pfd.fd);
-				pfd.fd = -1;
-			}
+			if (!handleClient(pfd, pfd.revents))
+				closeConnection(pfd.fd);
 		}
 
 		clearPollSet();

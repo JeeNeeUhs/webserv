@@ -12,6 +12,10 @@ class HTTPResponse {
 		std::map<std::string, std::string> _headers;
 		std::string _body;
 
+		bool _isFileBody;
+		std::string _filePath;
+		size_t _fileSize;
+
 	public:
 		HTTPResponse();
 		HTTPResponse(const HTTPResponse& other);
@@ -19,9 +23,14 @@ class HTTPResponse {
 		~HTTPResponse();
 
 		size_t getStatusCode(void) const;
+		bool isFileBody(void) const;
+		const std::string& getFilePath(void) const;
+		size_t getFileSize(void) const;
+
 		void setStatusCode(int statusCode);
 		void addHeader(const std::string& key, const std::string& value);
 		void setBody(const std::string& body);
+		void setFileBody(const std::string& path, size_t size);
 
 		std::string serialize(void);
 };

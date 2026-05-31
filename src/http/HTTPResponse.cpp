@@ -4,7 +4,7 @@
 
 #include <sstream>
 
-HTTPResponse::HTTPResponse() : _version(HTTP_VERSION) {}
+HTTPResponse::HTTPResponse() : _version(HTTP_VERSION), _isFileBody(false) {}
 
 HTTPResponse::HTTPResponse(const HTTPResponse& other) {
 	operator=(other);
@@ -17,6 +17,9 @@ HTTPResponse& HTTPResponse::operator=(const HTTPResponse& other) {
 		_reasonPhrase = other._reasonPhrase;
 		_headers = other._headers;
 		_body = other._body;
+		_isFileBody = other._isFileBody;
+		_filePath = other._filePath;
+		_fileSize = other._fileSize;
 	}
 
 	return *this;
@@ -51,6 +54,18 @@ size_t HTTPResponse::getStatusCode(void) const {
 	return _statusCode;
 }
 
+bool HTTPResponse::isFileBody(void) const {
+	return _isFileBody;
+}
+
+const std::string& HTTPResponse::getFilePath(void) const {
+	return _filePath;
+}
+
+size_t HTTPResponse::getFileSize(void) const {
+	return _fileSize;
+}
+
 void HTTPResponse::setStatusCode(int statusCode) {
 	_statusCode = statusCode;
 	if (_reasonPhrase.empty())
@@ -65,12 +80,21 @@ void HTTPResponse::setBody(const std::string& body) {
 	_body = body;
 }
 
+void HTTPResponse::setFileBody(const std::string& path, size_t size) {
+	_isFileBody = true;
+	_filePath = path;
+	_fileSize = size;
+}
+
 std::string HTTPResponse::serialize(void) {
 	std::ostringstream ss;
+
 	ss << "HTTP/" << _version << ' ' << _statusCode << ' ' << _reasonPhrase << "\r\n";
 
-	if (_headers.find("Content-Length") == _headers.end())
-		addHeader("Content-Length", utils::toString(_body.size()));
+	if (_headers.find("Content-Length") == _headers.end()) {
+		size_t len = _isFileBody ? _fileSize : _body.size();
+		addHeader("Content-Length", utils::toString(len));
+	}
 	// there is no keep-alive support
 	if (_headers.find("Connection") == _headers.end())
 		addHeader("Connection", "close");
@@ -78,7 +102,11 @@ std::string HTTPResponse::serialize(void) {
 	std::map<std::string, std::string>::const_iterator it;
 	for (it = _headers.begin(); it != _headers.end(); ++it)
 		ss << it->first << ": " << it->second << "\r\n";
+	ss << "\r\n";
 
-	ss << "\r\n" << _body;
-	return ss.str();
+	std::string header = ss.str();
+	if (_isFileBody)
+		return header;
+
+	return header + _body;
 }

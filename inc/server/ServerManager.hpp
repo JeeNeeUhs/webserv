@@ -29,6 +29,7 @@ class ServerManager {
 
 		void addPollFd(int fd, short events);
 		void clearPollSet(void);
+		void closeConnection(int& fd);
 
 	public:
 		ServerManager();
@@ -41,6 +42,6 @@ class ServerManager {
 		void run(void);
 };
 
-HTTPResponse buildErrorResponse(const ServerConfig* config, size_t statusCode);
+HTTPResponse buildErrorResponse(const ServerConfig& config, size_t statusCode);
 
 #endif
