@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <signal.h>
 
 static std::string parseArgs(int argc, char *argv[]) {
 	std::string filePath;
@@ -41,6 +42,8 @@ static void printUsage(const std::string& reason) {
 }
 
 int main(int argc, char *argv[]) {
+	signal(SIGPIPE, SIG_IGN);
+
 	Logger::info("webserv starting...");
 
 	try {

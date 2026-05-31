@@ -159,8 +159,7 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 	if (c.writeBuff.empty())
 		return false;
 
-	// TODO: MSG_NOSIGNAL
-	int bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), 0);
+	int bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), MSG_NOSIGNAL);
 	if (bytes > 0) {
 		c.writeBuff.erase(0, bytes);
 		if (c.writeBuff.empty() && c.bodyFd == -1)
@@ -168,6 +167,8 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 
 		return true;
 	}
+	else if (bytes == 0) // eof case, close connection
+		return false;
 
 	return true;
 }
