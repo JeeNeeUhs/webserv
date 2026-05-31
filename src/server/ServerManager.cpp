@@ -221,8 +221,6 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 				c.bodyRemaining = c.res.getFileSize();
 		}
 
-		// logging
-		std::time_t now = std::time(NULL);
 		Logger::info(c.req.getMethod() + " "
 			+ c.req.getPath()
 			+ (c.req.getQuery().empty() ? "" : "?" + c.req.getQuery())
