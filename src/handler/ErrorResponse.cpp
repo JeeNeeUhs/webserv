@@ -36,9 +36,10 @@ static HTTPResponse build(const T& config, size_t statusCode) {
 		return res;
 
 	std::ostringstream body;
-	body << "<html><body><h1 style=\"text-center: align;\">"
+	body << "<html><body><h1 style=\"text-align:center;margin:0\">"
 		<< statusCode << " " << res.getReasonPhrase()
-		<< "</h1></body></html>";
+		<< "</h1><hr/></body></html>";
+
 	res.addHeader("Content-Type", "text/html");
 	res.setBody(body.str());
 
