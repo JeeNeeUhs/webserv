@@ -7,7 +7,7 @@
 # define PROGRAM_NAME "webserv"
 # define DEFAULT_CONFIG_PATH "./config/default.conf"
 
-# define HTTP_VERSION "1.1"
+# define HTTP_VERSION "1.0"
 
 # define POLL_TIMEOUT 1000 // milliseconds (3 seconds)
 # define RECV_CHUNK 4 * 1024
