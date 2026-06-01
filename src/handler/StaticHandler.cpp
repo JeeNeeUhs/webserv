@@ -86,7 +86,6 @@ static HTTPResponse autoindex(const LocationConfig& loc, const std::string& file
 	html << "</pre><hr></body></html>\n";
 
 	HTTPResponse res;
-
 	res.setStatusCode(200);
 	res.addHeader("Content-Type", "text/html");
 	res.setBody(html.str());
@@ -99,7 +98,6 @@ static HTTPResponse serveFile(const LocationConfig& loc, const std::string& file
 		return buildErrorResponse(loc, 403);
 
 	HTTPResponse res;
-
 	res.setStatusCode(200);
 	res.addHeader("Content-Type", mimeType(filePath));
 	res.setFileBody(filePath, static_cast<size_t>(st.st_size));
@@ -137,7 +135,6 @@ HTTPResponse StaticHandler::handleGet(const LocationConfig& loc, const std::stri
 	// https://github.com/nginx/nginx/blob/d44205284fa41662da803b796d6056fc1e59b1f3/src/http/modules/ngx_http_static_module.c#L148
 	if (isDirectory(filePath) && (requestPath.empty() || requestPath[requestPath.size() - 1] != '/')) {
 		HTTPResponse res;
-
 		res.setStatusCode(301);
 		res.addHeader("Location", requestPath + "/");
 		return res;

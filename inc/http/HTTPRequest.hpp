@@ -33,9 +33,9 @@ class HTTPRequest {
 		const std::string& getVersion(void) const;
 		const std::map<std::string, std::string>& getQueries(void) const;
 		const std::map<std::string, std::string>& getHeaders(void) const;
-		const std::vector<std::string>& getHeaderValuesList(const std::string& key) const;
 		const std::string& getBody(void) const;
 		std::string getHeader(const std::string& key) const;
+		const std::vector<std::string> getHeaderValues(const std::string& key) const;
 		std::string getUnparsedRequest(void) const;
 
 		bool parse(const std::string& rawRequest, size_t headerEnd);

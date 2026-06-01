@@ -117,7 +117,6 @@ static bool test_chunked_bad_size(void) {
 
 static bool test_response_serialize(void) {
 	HTTPResponse res;
-
 	res.setStatusCode(404);
 	res.addHeader("Connection", "close");
 	res.setBody("page not found babus");
