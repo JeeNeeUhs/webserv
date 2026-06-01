@@ -8,10 +8,9 @@
 template <typename T>
 static bool assert_equal(const T& actual, const T& expected) {
 	if (actual != expected) {
-		std::cerr << "fail: "
-			<< " (expected: '" << expected
-			<< "', actual: '" << actual << "')"
-			<< std::endl;
+		std::cerr << "fail:" << std::endl
+			<< "expected: " << expected << std::endl
+			<< "actual: " << actual << std::endl;
 		return false;
 	}
 
