@@ -26,17 +26,17 @@ class HTTPRequest {
 		HTTPRequest& operator=(const HTTPRequest& other);
 		~HTTPRequest();
 
-		const std::string& getMethod() const;
-		const std::string& getPath() const;
-		const std::string& getQuery() const;
-		const std::string& getProtocol() const;
-		const std::string& getVersion() const;
-		const std::map<std::string, std::string>& getQueries() const;
-		const std::map<std::string, std::string>& getHeaders() const;
+		const std::string& getMethod(void) const;
+		const std::string& getPath(void) const;
+		const std::string& getQuery(void) const;
+		const std::string& getProtocol(void) const;
+		const std::string& getVersion(void) const;
+		const std::map<std::string, std::string>& getQueries(void) const;
+		const std::map<std::string, std::string>& getHeaders(void) const;
 		const std::vector<std::string>& getHeaderValuesList(const std::string& key) const;
-		const std::string& getBody() const;
+		const std::string& getBody(void) const;
 		std::string getHeader(const std::string& key) const;
-		std::string getUnparsedRequest() const;
+		std::string getUnparsedRequest(void) const;
 
 		bool parse(const std::string& rawRequest, size_t headerEnd);
 };
