@@ -238,21 +238,17 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 	char chunk[RECV_CHUNK];
 
-	while (true) {
-		int bytes = recv(pfd.fd, chunk, sizeof(chunk), 0);
+	int bytes = recv(pfd.fd, chunk, sizeof(chunk), 0);
+	if (bytes > 0) {
+		size_t buffSize = c.readBuff.size() + bytes;
+		size_t maxSize = c.config->clientMaxHeaderSize + c.config->clientMaxBodySize;
+		if (buffSize > maxSize)
+			return processBuffer(pfd, c);
 
-		if (bytes > 0) {
-			size_t buffSize = c.readBuff.size() + bytes;
-			size_t maxSize = c.config->clientMaxHeaderSize + c.config->clientMaxBodySize;
-			if (buffSize > maxSize)
-				break;
-
-			c.readBuff.append(chunk, bytes);
-		} else if (bytes == 0) {
-			Logger::debug("fd " + utils::toString(pfd.fd) + " closed connection (eof)");
-			return false;
-		} else
-			break;
+		c.readBuff.append(chunk, bytes);
+	} else if (bytes == 0) {
+		Logger::debug("fd " + utils::toString(pfd.fd) + " closed connection (eof)");
+		return false;
 	}
 
 	return processBuffer(pfd, c);
