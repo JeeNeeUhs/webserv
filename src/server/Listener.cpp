@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
 
@@ -54,8 +53,7 @@ void Listener::open() {
 		throw std::runtime_error("socket() failed for " + _host);
 
 	int opt = 1;
-	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0
-		|| setsockopt(_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
+	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 		throw std::runtime_error("setsockopt() failed for " + _host);
 
 	if (fcntl(_fd, F_SETFL, O_NONBLOCK) < 0)
@@ -65,11 +63,7 @@ void Listener::open() {
 	std::memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(static_cast<uint16_t>(_port));
-
-	if (_host == "0.0.0.0")
-		addr.sin_addr.s_addr = INADDR_ANY;
-	else if (inet_pton(AF_INET, _host.c_str(), &addr.sin_addr) != 1)
-		throw std::runtime_error("invalid host address: " + _host);
+	addr.sin_addr.s_addr = utils::parseAddr(_host);
 
 	if (bind(_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 		throw std::runtime_error("bind() failed for " + _host + ":" + utils::toString(_port));
