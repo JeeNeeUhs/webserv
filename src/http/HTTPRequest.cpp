@@ -139,7 +139,7 @@ std::string HTTPRequest::getUnparsedRequest(void) const {
 }
 
 const std::vector<std::string> HTTPRequest::getHeaderValues(const std::string& key) const {
-	return utils::split(getHeader(key), ',');
+	return utils::split(getHeader(key), ';');
 }
 
 bool HTTPRequest::parse(const std::string& rawRequest, size_t headerEnd) {

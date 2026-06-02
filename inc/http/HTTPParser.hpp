@@ -21,6 +21,7 @@ namespace HTTPParser {
 	bool parseBody(const std::string& rawBody, const std::map<std::string, std::string>& headers, std::string& body);
 
 	// shared with ServerManager
+	std::string peekHeader(const std::string& rawHeaders, const std::string& name);
 	size_t findHeaderEnd(const std::string& buffer);
 	RequestStatus checkComplete(const std::string& buffer, std::size_t headerEnd);
 }

@@ -28,22 +28,6 @@ static bool isChunked(const std::string& transferEncoding) {
 	return HTTPParser::toLower(transferEncoding).find("chunked") != std::string::npos;
 }
 
-static std::string peekHeader(const std::string& rawHeaders, const std::string& name) {
-	std::string lower = HTTPParser::toLower(rawHeaders);
-	std::string key = HTTPParser::toLower(name) + ":";
-
-	size_t pos = lower.find(key);
-	if (pos == std::string::npos)
-		return "";
-
-	size_t valStart = pos + key.size();
-	size_t eol = rawHeaders.find("\r\n", valStart);
-	std::string raw = rawHeaders.substr(valStart,
-		(eol == std::string::npos ? rawHeaders.size() : eol) - valStart);
-
-	return trim(raw);
-}
-
 static HTTPParser::RequestStatus chunkedStatus(const std::string& buffer, size_t from) {
 	size_t pos = from;
 
@@ -105,6 +89,22 @@ std::string HTTPParser::urlDecode(const std::string& encoded) {
 	}
 
 	return decoded;
+}
+
+std::string HTTPParser::peekHeader(const std::string& rawHeaders, const std::string& name) {
+	std::string lower = HTTPParser::toLower(rawHeaders);
+	std::string key = HTTPParser::toLower(name) + ":";
+
+	size_t pos = lower.find(key);
+	if (pos == std::string::npos)
+		return "";
+
+	size_t valStart = pos + key.size();
+	size_t eol = rawHeaders.find("\r\n", valStart);
+	std::string raw = rawHeaders.substr(valStart,
+		(eol == std::string::npos ? rawHeaders.size() : eol) - valStart);
+
+	return trim(raw);
 }
 
 size_t HTTPParser::findHeaderEnd(const std::string& buffer) {

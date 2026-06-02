@@ -4,7 +4,7 @@
 
 #include <sstream>
 
-HTTPResponse::HTTPResponse() : _version(HTTP_VERSION), _isFileBody(false) {}
+HTTPResponse::HTTPResponse() : _version(HTTP_VERSION), _statusCode(0), _isFileBody(false) {}
 
 HTTPResponse::HTTPResponse(const HTTPResponse& other) {
 	operator=(other);
