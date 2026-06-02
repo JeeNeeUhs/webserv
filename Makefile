@@ -10,7 +10,8 @@ SRCS		= main.cpp \
 			Config.cpp ConfigParser.cpp \
 			ServerManager.cpp Listener.cpp \
 			HTTPResponse.cpp HTTPRequest.cpp HTTPParser.cpp \
-			ErrorResponse.cpp RequestHandler.cpp StaticHandler.cpp
+			RequestHandler.cpp StaticHandler.cpp ErrorResponse.cpp \
+			UploadStore.cpp
 TEST_SRCS	= tests.cpp test_http.cpp test_config.cpp
 
 OBJS		= $(addprefix $(BUILD_DIR)/,$(SRCS:.cpp=.o))
