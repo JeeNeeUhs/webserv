@@ -110,10 +110,19 @@ HTTPResponse RequestHandler::validateUploadRequest(Connection& c) {
 	if (!c.loc)
 		return buildErrorResponse(*c.config, 404);
 
+	if (c.loc->redirect.first != 0) {
+		HTTPResponse res;
+		res.setStatusCode(c.loc->redirect.first);
+		res.addHeader("Location", c.loc->redirect.second);
+		return res;
+	}
+
 	if (!isMethodAllowed(*c.loc, c.req.getMethod()))
 		return buildErrorResponse(*c.loc, 405);
 
-	if (!(c.loc->methods.size() == 1 && c.loc->methods[0] == "POST" && !c.loc->uploadStore.empty()))
+	std::vector<std::string>::const_iterator it =
+		std::find(c.loc->methods.begin(), c.loc->methods.end(), "POST");
+	if (it != c.loc->methods.end() && c.loc->uploadStore.empty())
 		return buildErrorResponse(*c.loc, 403);
 
 	struct stat st;
