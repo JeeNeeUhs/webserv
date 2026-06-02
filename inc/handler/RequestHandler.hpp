@@ -4,8 +4,12 @@
 # include "ConfigTypes.hpp"
 # include "HTTPRequest.hpp"
 # include "HTTPResponse.hpp"
+# include "Connection.hpp"
 
 namespace RequestHandler {
+	const LocationConfig* matchLocation(const ServerConfig& server, const std::string& path);
+	HTTPResponse validateUploadRequest(Connection& c);
+	HTTPResponse uploadToStore(Connection& c);
 	HTTPResponse handle(const ServerConfig& server, const HTTPRequest& req);
 }
 

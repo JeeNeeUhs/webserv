@@ -11,6 +11,7 @@ enum ConnState {
 	READING_HEADERS,
 	READING_BODY,
 
+	STORING_BODY,
 	HEADER_TIMEOUT,
 	BODY_TIMEOUT,
 	SEND_TIMEOUT,
@@ -18,12 +19,19 @@ enum ConnState {
 	CONN_DONE
 };
 
+enum UploadState {
+	UPLOAD_INIT,
+	UPLOAD_FIND_BOUNDARY,
+	UPLOAD_PARSE_HEADER,
+	UPLOAD_WRITE_BODY
+};
+
 struct Connection {
 	int listenFd;
 
 	const ServerConfig*	config;
 	ConnState			state;
-
+	
 	std::time_t	connStart;
 	std::time_t	lastActivity;
 
@@ -36,6 +44,13 @@ struct Connection {
 	int		bodyFd;
 	size_t	bodyRemaining;
 
+	UploadState nmft; //firs time, no no not my first time
+	std::string boundary;
+	std::string uploadedFilename;
+	const LocationConfig* loc;
+	std::vector<std::string> uploadedFiles;
+	bool uploadEof;
+
 	Connection()
 		: listenFd(-1),
 		config(NULL),
@@ -44,7 +59,9 @@ struct Connection {
 		lastActivity(0),
 		headerLength(0),
 		bodyFd(-1),
-		bodyRemaining(0) {}
+		bodyRemaining(0),
+		nmft(UPLOAD_INIT),
+		uploadEof(false) {}
 };
 
 #endif

@@ -197,9 +197,33 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		std::size_t headerEnd = HTTPParser::findHeaderEnd(c.readBuff);
 		if (headerEnd == std::string::npos)
 			return true;
-
 		c.headerLength = headerEnd;
-		c.state = READING_BODY;
+
+		std::vector<std::string> ct = utils::split(HTTPParser::peekHeader(c.readBuff, "Content-Type"), ';');
+		std::vector<std::string>::iterator it = std::find(ct.begin(), ct.end(), "multipart/form-data");
+		if (it != ct.end())
+			c.state = STORING_BODY;
+		else
+			c.state = READING_BODY;
+	}
+
+	if (c.state == STORING_BODY) {
+		if (c.nmft == UPLOAD_INIT) {
+			c.res = RequestHandler::validateUploadRequest(c);
+			if (c.nmft == UPLOAD_INIT) {
+				c.writeBuff = c.res.serialize();
+				c.state = CONN_DONE;
+				pfd.events = POLLOUT;
+				return true;
+			}	
+		}
+		c.res = RequestHandler::uploadToStore(c);
+		if (c.res.getStatusCode() != 0) {
+			c.writeBuff = c.res.serialize();
+			c.state = CONN_DONE;
+			pfd.events = POLLOUT;
+			return true;
+		}
 	}
 
 	if (c.state == READING_BODY) {
@@ -248,6 +272,14 @@ bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 		c.readBuff.append(chunk, bytes);
 	} else if (bytes == 0) {
 		Logger::debug("fd " + utils::toString(pfd.fd) + " closed connection (eof)");
+		if (c.state == STORING_BODY) {
+			c.uploadEof = true;
+			c.res = RequestHandler::uploadToStore(c);
+			c.writeBuff = c.res.serialize();
+			c.state = CONN_DONE;
+			pfd.events = POLLOUT;
+			return true;
+		}
 		return false;
 	}
 
