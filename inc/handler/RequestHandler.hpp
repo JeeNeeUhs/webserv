@@ -8,8 +8,12 @@
 
 namespace RequestHandler {
 	const LocationConfig* matchLocation(const ServerConfig& server, const std::string& path);
+	bool isCgiRequest(const LocationConfig& loc, const std::string& path);
 	HTTPResponse validateUploadRequest(Connection& c);
 	HTTPResponse uploadToStore(Connection& c);
+	HTTPResponse doneCgi(Connection& c);
+	void doneWritingCgi(Connection& c);
+	HTTPResponse createCgi(Connection& c);
 	HTTPResponse handle(const ServerConfig& server, const HTTPRequest& req);
 }
 

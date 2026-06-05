@@ -10,8 +10,9 @@
 enum ConnState {
 	READING_HEADERS,
 	READING_BODY,
-
 	STORING_BODY,
+	CGI_REQUEST,
+	
 	HEADER_TIMEOUT,
 	BODY_TIMEOUT,
 	SEND_TIMEOUT,
@@ -44,11 +45,17 @@ struct Connection {
 	int		bodyFd;
 	size_t	bodyRemaining;
 
-	UploadState nmft; //firs time, no no not my first time
-	std::string boundary;
-	std::string uploadedFilename;
-	const LocationConfig* loc;
-	std::vector<std::string> uploadedFiles;
+	int cgiPid;
+	int cgiReadFd;
+	int cgiWriteFd;
+	std::string cgiWriteBuff;
+	// std::string cgiReadBuff;
+
+	UploadState					nmft; //firs time, no no not my first time
+	std::string					boundary;
+	std::string					uploadedFilename;
+	const LocationConfig*		loc;
+	std::vector<std::string>	uploadedFiles;
 	bool uploadEof;
 
 	Connection()
@@ -60,6 +67,9 @@ struct Connection {
 		headerLength(0),
 		bodyFd(-1),
 		bodyRemaining(0),
+		cgiPid(-1),
+		cgiReadFd(-1),
+		cgiWriteFd(-1),
 		nmft(UPLOAD_INIT),
 		uploadEof(false) {}
 };

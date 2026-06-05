@@ -4,6 +4,8 @@
 #include "webserv.hpp"
 #include "HTTPParser.hpp"
 #include "RequestHandler.hpp"
+#include <unistd.h>
+#include <signal.h>
 
 #include <iostream>
 #include <unistd.h>
@@ -70,7 +72,28 @@ void ServerManager::closeConnection(int& fd) {
 	if (it != _connections.end()) {
 		if (it->second.bodyFd != -1)
 			close(it->second.bodyFd);
-		
+		if (it->second.cgiReadFd != -1) {
+			close(it->second.cgiReadFd);
+			for (size_t i = 0; i < _pollFds.size(); ++i) {
+				if (_pollFds[i].fd == it->second.cgiReadFd) {
+					_pollFds[i].fd = -1;
+					break;
+				}
+			}
+		}
+		if (it->second.cgiWriteFd != -1) {
+			close(it->second.cgiWriteFd);
+			for (size_t i = 0; i < _pollFds.size(); ++i) {
+				if (_pollFds[i].fd == it->second.cgiWriteFd) {
+					_pollFds[i].fd = -1;
+					break;
+				}
+			}
+		}
+		if (it->second.cgiPid != -1) {
+			kill(it->second.cgiPid, SIGKILL);
+			// waitpid(it->second.cgiPid, NULL, 0);
+		}
 		_connections.erase(it);
 	}
 
@@ -91,6 +114,7 @@ void ServerManager::checkTimeouts(void) {
 					c.state = HEADER_TIMEOUT;
 				break;
 			case READING_BODY:
+			case STORING_BODY:
 				if (now - c.lastActivity > c.config->clientBodyTimeout)
 					c.state = BODY_TIMEOUT;
 				break;
@@ -138,6 +162,15 @@ void ServerManager::acceptClients(int listenFd) {
 }
 
 bool ServerManager::sendToClient(int fd, Connection& c) {
+	std::map<int, Connection>::iterator it;
+	if (c.config == NULL) {
+		it = _cgiWriteFds.find(fd);
+		if (it == _cgiWriteFds.end())
+			return false;
+		c.writeBuff = it->second.readBuff;
+		return true;
+	}
+
 	if (c.writeBuff.empty() && c.bodyFd != -1) {
 		char chunkBuff[SEND_CHUNK];
 
@@ -149,10 +182,18 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 		if (n > 0) {
 			c.writeBuff.append(chunkBuff, n);
 			c.bodyRemaining -= n;
+			if (c.bodyRemaining < 0)
+				c.bodyRemaining = 0;
 		}
-		if (n <= 0 || c.bodyRemaining <= 0) {
+		if (n <= 0 || c.bodyRemaining == 0) {
+			//burda 0 byte okuma durumunda illa kapatmak zorunda degiliz cgi ama kapaticaz suanlik calisir
 			close(c.bodyFd);
 			c.bodyFd = -1;
+			if (c.cgiPid != -1) {
+				kill(c.cgiPid, SIGKILL);
+				// waitpid(c.cgiPid, NULL, 0);
+				c.cgiPid = -1;
+			}
 		}
 	}
 
@@ -162,8 +203,13 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 	int bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), MSG_NOSIGNAL);
 	if (bytes > 0) {
 		c.writeBuff.erase(0, bytes);
-		if (c.writeBuff.empty() && c.bodyFd == -1)
+		if (c.config == NULL)
+			it->second.readBuff.erase(0, bytes);
+		if (c.writeBuff.empty() && c.bodyFd == -1) {
+			if (c.config == NULL) 
+				RequestHandler::doneWritingCgi(it->second);
 			return false;
+		}
 
 		return true;
 	}
@@ -199,12 +245,60 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			return true;
 		c.headerLength = headerEnd;
 
+		std::string path;
+		std::string trash;
+		HTTPParser::parseRequestLine(c.readBuff.substr(0, c.readBuff.find("\r\n")), trash, trash, path, trash, trash);
+		if (RequestHandler::isCgiRequest(*RequestHandler::matchLocation(*c.config, path), path)) {
+			// burda confige index index.go gibi seyler cgi dusmuyo bunu hallate kiral
+			c.state = CGI_REQUEST;
+		} else {
 		std::vector<std::string> ct = utils::split(HTTPParser::peekHeader(c.readBuff, "Content-Type"), ';');
 		std::vector<std::string>::iterator it = std::find(ct.begin(), ct.end(), "multipart/form-data");
 		if (it != ct.end())
 			c.state = STORING_BODY;
 		else
 			c.state = READING_BODY;
+		}
+	}
+
+	if (c.state == CGI_REQUEST) {
+		if (c.config == NULL) {
+			std::map<int, Connection>::iterator it = _cgiReadFds.find(pfd.fd);
+			if (it == _cgiReadFds.end())
+				return false;
+			c = it->second;
+			c.res = RequestHandler::doneCgi(c);
+			if (c.res.getStatusCode() != 0) {
+				c.writeBuff = c.res.serialize();
+				c.state = CONN_DONE;
+				pfd.events = POLLOUT;
+				return true; //false olmasi lazm gibi
+			}
+			return true;
+		}
+		Logger::debug("processing CGI request for fd " + utils::toString(pfd.fd));
+		if (c.cgiPid == -1 && c.cgiReadFd == -1 && c.cgiWriteFd == -1) {
+			c.res = RequestHandler::createCgi(c);
+			if (c.res.getStatusCode() != 0) {
+				c.writeBuff = c.res.serialize();
+				c.state = CONN_DONE;
+				pfd.events = POLLOUT;
+				return true; //false olmasi lazm gibi
+			}
+			c.readBuff.erase(0, c.headerLength);
+			_cgiWriteFds[c.cgiWriteFd] = c;
+			_cgiReadFds[c.cgiReadFd] = c;
+			addPollFd(c.cgiReadFd, POLLIN);
+			addPollFd(c.cgiWriteFd, POLLOUT);
+		}
+		return true;
+		// c.req.parse(c.readBuff, c.headerLength);
+		// Logger::debug(c.req.getUnparsedRequest());
+		// c.res = buildErrorResponse(*c.config, 531);
+		// c.writeBuff = c.res.serialize();
+		// c.state = CONN_DONE;
+		// pfd.events = POLLOUT;
+		// return true;
 	}
 
 	if (c.state == STORING_BODY) {
@@ -214,7 +308,7 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 				c.writeBuff = c.res.serialize();
 				c.state = CONN_DONE;
 				pfd.events = POLLOUT;
-				return true;
+				return true; //false olmasi lazm gibi
 			}	
 		}
 		c.res = RequestHandler::uploadToStore(c);
@@ -222,7 +316,7 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			c.writeBuff = c.res.serialize();
 			c.state = CONN_DONE;
 			pfd.events = POLLOUT;
-			return true;
+			return true; //false olmasi lazm gibi
 		}
 	}
 
@@ -264,12 +358,19 @@ bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 
 	int bytes = recv(pfd.fd, chunk, sizeof(chunk), 0);
 	if (bytes > 0) {
-		size_t buffSize = c.readBuff.size() + bytes;
-		size_t maxSize = c.config->clientMaxHeaderSize + c.config->clientMaxBodySize;
-		if (buffSize > maxSize)
-			return processBuffer(pfd, c);
+		if (c.config != NULL) {
+			size_t buffSize = c.readBuff.size() + bytes;
+			size_t maxSize = c.config->clientMaxHeaderSize + c.config->clientMaxBodySize;
+			if (buffSize > maxSize)
+				return processBuffer(pfd, c);
 
-		c.readBuff.append(chunk, bytes);
+			c.readBuff.append(chunk, bytes);
+		} else {
+			std::map<int, Connection>::iterator it = _cgiReadFds.find(pfd.fd);
+			if (it == _cgiReadFds.end())
+				return false;
+			it->second.cgiWriteBuff.append(chunk, bytes);
+		}
 	} else if (bytes == 0) {
 		Logger::debug("fd " + utils::toString(pfd.fd) + " closed connection (eof)");
 		if (c.state == STORING_BODY) {
@@ -279,7 +380,7 @@ bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 			c.state = CONN_DONE;
 			pfd.events = POLLOUT;
 			return true;
-		}
+		} // buraya 0 gelip connection kapandiginda indir
 		return false;
 	}
 
@@ -287,11 +388,24 @@ bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 }
 
 bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
-	std::map<int, Connection>::iterator it = _connections.find(pfd.fd);
-	if (it == _connections.end())
-		return false;
+	std::map<int, Connection>::iterator conIt = _connections.find(pfd.fd);
+	std::map<int, Connection>::iterator cgiReadIt = _cgiReadFds.find(pfd.fd);
+	std::map<int, Connection>::iterator cgiWriteIt = _cgiWriteFds.find(pfd.fd);
+	if (conIt == _connections.end()) {
+		if (cgiReadIt == _cgiReadFds.end()) {
+			if (cgiWriteIt == _cgiWriteFds.end()) 
+				return false;
+		}
+	}
 
-	Connection& c = it->second;
+	// Connection c;
+	// if (it != _connections.end())
+	// 	c = it->second;
+	// else {}
+
+	Connection& c = conIt->second;
+	Connection f;
+	f.state = CGI_REQUEST;
 	
 	// RST packet, connection reset cases
 	if (revents & (POLLERR | POLLNVAL)) {
@@ -300,14 +414,24 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	}
 
 	if (revents & (POLLIN | POLLHUP)) {
-		if (!readFromClient(pfd, c))
-			return false;
+		if (conIt == _connections.end()) {
+			if (!readFromClient(pfd, f))
+				return true;
+		} else {
+			if (!readFromClient(pfd, c))
+				return false;
+		}
 		c.lastActivity = std::time(NULL);
 	}
 
 	if (revents & POLLOUT) {
-		if (!sendToClient(pfd.fd, c))
-			return false;
+		if (conIt == _connections.end()) {
+			if (!sendToClient(pfd.fd, f))
+				return true;
+		} else {
+			if (!sendToClient(pfd.fd, c))
+				return false;
+		}
 		c.lastActivity = std::time(NULL);
 	}
 
