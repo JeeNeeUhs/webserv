@@ -17,8 +17,8 @@ class ServerManager {
 		std::vector<pollfd_t>		_pollFds;
 		std::map<int , Listener>	_listeners;
 		std::map<int , Connection>	_connections;
-		std::map<int, Connection>	_cgiReadFds; //cgi read fd to connection fd
-		std::map<int, Connection>	_cgiWriteFds; //cgi write fd to connection fd
+		std::map<int, Connection*>	_cgiReadFds; //cgi read fd to connection fd
+		std::map<int, Connection*>	_cgiWriteFds; //cgi write fd to connection fd
 		// std::vector<int>			_cgiWriteFds;
 		// std::vector<int>			_cgiReadFds;
 

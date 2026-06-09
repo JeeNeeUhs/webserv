@@ -215,6 +215,7 @@ static char** mapToEnvp(const std::map<std::string, std::string>& env) {
 // 	std::vector<std::string> env = buildEnv(data, location, request);
 	
 // }
+
 static pid_t executeCgi(Connection& c) {
 	int pipeIn[2];
 	int pipeOut[2];
@@ -246,9 +247,8 @@ static pid_t executeCgi(Connection& c) {
 		close(pipeOut[1]);
 		return -1;
 	} else if (pid == 0) {
-		// dup2(pipeIn[0], STDIN_FILENO);
-		// dup2(pipeOut[1], STDOUT_FILENO);
-		Logger::debug("child process started for CGI execution");
+		dup2(pipeIn[0], STDIN_FILENO);
+		dup2(pipeOut[1], STDOUT_FILENO);
 
 		close(pipeIn[0]);
 		close(pipeIn[1]);
@@ -261,13 +261,20 @@ static pid_t executeCgi(Connection& c) {
 		} else {
 			filePath = c.loc->root + c.req.getPath();
 		}
+
 		if (chdir(c.loc->root.c_str()) == -1)
 			exit(1);
-		Logger::debug("executing CGI script at " + filePath);
-		std::map<std::string, std::string> env = buildEnv(*c.config, *c.loc, c.req);
-		Logger::debug("CGI environment variables:");
-		execve(filePath.c_str(), NULL, mapToEnvp(env));
-		Logger::error("Failed to execute CGI script at " + filePath);
+
+		// FIXME: debug area
+		char* argv[2];
+
+		argv[0] = const_cast<char*>(filePath.c_str()); 
+		argv[1] = NULL;
+
+		char* envp[] = { NULL };
+
+		execve(filePath.c_str(), argv, envp);
+
 		exit(1);
 	} else {
 		close(pipeIn[0]);
@@ -277,7 +284,7 @@ static pid_t executeCgi(Connection& c) {
 			close(pipeIn[1]);
 			close(pipeOut[0]);
 			kill(pid, SIGKILL);
-			// waitpid(pid, NULL, 0);
+			waitpid(pid, NULL, 0);
 			return -1;
 		}
 
@@ -285,7 +292,7 @@ static pid_t executeCgi(Connection& c) {
 			close(pipeIn[1]);
 			close(pipeOut[0]);
 			kill(pid, SIGKILL);
-			// waitpid(pid, NULL, 0);
+			waitpid(pid, NULL, 0);
 			return -1;
 		}
 		c.cgiPid = pid;
@@ -312,7 +319,8 @@ HTTPResponse RequestHandler::doneCgi(Connection& c) {
 	if (cgiHeaders.find("Content-Type") == cgiHeaders.end() || cgiHeaders["Content-Type"].empty())
 		return buildErrorResponse(*c.config, 500);
 	if (cgiHeaders.find("Status") == cgiHeaders.end() || cgiHeaders["Status"].empty()) {
-		return buildErrorResponse(*c.config, 500);
+		// return buildErrorResponse(*c.config, 500);
+		c.res.setStatusCode(200);
 	} else {
 		std::vector<std::string> statusParts = utils::split(cgiHeaders["Status"], ' ');
 		if (statusParts.size() < 2)
