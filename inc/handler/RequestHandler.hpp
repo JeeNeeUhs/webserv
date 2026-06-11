@@ -5,11 +5,18 @@
 # include "HTTPRequest.hpp"
 # include "HTTPResponse.hpp"
 # include "Connection.hpp"
+# include "ServerManager.hpp"
 
 namespace RequestHandler {
 	const LocationConfig* matchLocation(const ServerConfig& server, const std::string& path);
+	bool isCgiRequest(const LocationConfig& loc, const std::string& path);
 	HTTPResponse validateUploadRequest(Connection& c);
 	HTTPResponse uploadToStore(Connection& c);
+	void cgiDone(Connection& c, pollfd_t& pfd);
+	void doneWritingCgi(Connection& c);
+	void cgiDoneWriting(Connection& c, pollfd_t& pfd);
+	void cgiDoneReading(Connection& c, pollfd_t& pfd);
+	HTTPResponse createCgi(Connection& c);
 	HTTPResponse handle(const ServerConfig& server, const HTTPRequest& req);
 }
 

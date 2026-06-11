@@ -14,23 +14,6 @@ static bool isMethodAllowed(const LocationConfig& loc, const std::string& method
 	return false;
 }
 
-static bool isCgiRequest(const LocationConfig& loc, const std::string& path) {
-	if (loc.cgiExtensions.empty())
-		return false;
-
-	size_t dot = path.rfind('.');
-	if (dot == std::string::npos)
-		return false;
-
-	std::string ext = path.substr(dot);
-	for (size_t i = 0; i < loc.cgiExtensions.size(); ++i) {
-		if (loc.cgiExtensions[i] == ext)
-			return true;
-	}
-
-	return false;
-}
-
 // check for null-bytes or path traversal exploits
 static bool isSafePath(const std::string& path) {
 	if (path.find('\0') != std::string::npos)
@@ -95,6 +78,31 @@ const LocationConfig* RequestHandler::matchLocation(const ServerConfig& server, 
 	}
 
 	return longest;
+}
+
+bool RequestHandler::isCgiRequest(const LocationConfig& loc, const std::string& path) {
+	if (loc.cgiExtensions.empty())
+		return false;
+
+	std::string ext;
+
+	size_t dot = path.rfind('.');
+	if (dot == std::string::npos) {
+		dot = loc.index.rfind('.');
+		if (dot == std::string::npos)
+			return false;
+		else
+			ext = loc.index.substr(dot);
+	}
+	else
+		ext = path.substr(dot);
+
+	for (size_t i = 0; i < loc.cgiExtensions.size(); ++i) {
+		if (loc.cgiExtensions[i] == ext)
+			return true;
+	}
+
+	return false;
 }
 
 HTTPResponse RequestHandler::validateUploadRequest(Connection& c) {

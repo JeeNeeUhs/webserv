@@ -17,6 +17,8 @@ class ServerManager {
 		std::vector<pollfd_t>		_pollFds;
 		std::map<int, Listener>		_listeners;
 		std::map<int, Connection>	_connections;
+		std::map<int, Connection*>	_cgiReadFds; //cgi read fd to connection fd
+		std::map<int, Connection*>	_cgiWriteFds; //cgi write fd to connection fd
 
 		void checkTimeouts(void);
 		void acceptClients(int listenFd);
@@ -30,6 +32,9 @@ class ServerManager {
 		void addPollFd(int fd, short events);
 		void clearPollSet(void);
 		void closeConnection(int& fd);
+
+		bool readFromCgi(pollfd_t& pfd, Connection& c);
+		bool writeToCgi(pollfd_t& pfd, Connection& c);
 
 	public:
 		ServerManager();

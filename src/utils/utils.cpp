@@ -23,6 +23,15 @@ std::string utils::trim(const std::string& s) {
 	return s.substr(start, end - start + 1);
 }
 
+std::string utils::trimCharset(const std::string& s, const std::string& charSet) {
+	size_t start = s.find_first_not_of(charSet);
+	if (start == std::string::npos)
+		return "";
+
+	size_t end = s.find_last_not_of(charSet);
+	return s.substr(start, end - start + 1);
+}
+
 unsigned int utils::parseAddr(const std::string& host) {
 	if (host == "0.0.0.0")
 		return INADDR_ANY;

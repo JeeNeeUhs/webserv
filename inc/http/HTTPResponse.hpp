@@ -28,6 +28,7 @@ class HTTPResponse {
 		const std::string& getFilePath(void) const;
 		size_t getFileSize(void) const;
 
+		void setReasonPhrase(const std::string& reasonPhrase);
 		void setStatusCode(size_t statusCode);
 		void addHeader(const std::string& key, const std::string& value);
 		void setBody(const std::string& body);

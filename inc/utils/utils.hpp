@@ -28,6 +28,7 @@ namespace utils {
 
 	std::vector<std::string> split(const std::string& s, char delim);
 	std::string trim(const std::string& s);
+	std::string trimCharset(const std::string& s, const std::string& charSet);
 	unsigned int parseAddr(const std::string& host);
 }
 

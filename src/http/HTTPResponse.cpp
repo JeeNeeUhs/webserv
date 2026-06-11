@@ -70,6 +70,10 @@ size_t HTTPResponse::getFileSize(void) const {
 	return _fileSize;
 }
 
+void HTTPResponse::setReasonPhrase(const std::string& reasonPhrase) {
+	_reasonPhrase = reasonPhrase;
+}
+
 void HTTPResponse::setStatusCode(size_t statusCode) {
 	_statusCode = statusCode;
 	if (_reasonPhrase.empty())
