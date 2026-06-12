@@ -347,14 +347,6 @@ void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
 	return;
 }
 
-void RequestHandler::doneWritingCgi(Connection& c) { //sil
-	if (c.cgiReadFd != -1) {
-		close(c.cgiReadFd);
-		c.cgiReadFd = -1;
-	}
-}
-
-
 // cgi sisteme ful entegre olarak calisir
 // asagida gormus oldugunuz fonksiyonu sadece cgi baslatmak icin procesess i olusturmak icin kullaniyoruz
 // diger butun takipler pollda

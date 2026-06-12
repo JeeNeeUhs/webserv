@@ -92,7 +92,7 @@ void ServerManager::closeConnection(int& fd) {
 		}
 		if (it->second.cgiPid != -1) {
 			kill(it->second.cgiPid, SIGKILL);
-			// waitpid(it->second.cgiPid, NULL, 0);
+			waitpid(it->second.cgiPid, NULL, 0);
 		}
 		
 		_connections.erase(it);
@@ -343,7 +343,9 @@ bool ServerManager::readFromCgi(pollfd_t& pfd, Connection& c) {
 	if (bytes > 0) {
 		c.cgiWriteBuff.append(chunk, bytes);
 		Logger::debug("read " + utils::toString(bytes) + " bytes from cgi for fd " + utils::toString(pfd.fd));
-	} else if (bytes != -1) {
+	}
+
+	if (bytes != -1) {
 		std::size_t headerEnd = HTTPParser::findHeaderEnd(c.cgiWriteBuff);
 		if (headerEnd != std::string::npos) {
 			pollfd_t *tempPfd = NULL;
@@ -374,7 +376,7 @@ bool ServerManager::readFromCgi(pollfd_t& pfd, Connection& c) {
 			return false;
 		}
 
-		return false;
+		return true;
 	}
 
 	return true;
