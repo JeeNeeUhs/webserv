@@ -40,6 +40,9 @@
 # debug information files
 *.dwo
 
+# macos things
+.DS_Store
+
 # Project-specific files
 build/
 webserv
