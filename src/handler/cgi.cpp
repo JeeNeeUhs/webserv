@@ -278,7 +278,6 @@ static pid_t executeCgi(Connection& c, std::string& filePath) {
 		c.cgiPid = pid;
 		c.cgiReadFd = pipeOut[0];
 		c.cgiWriteFd = pipeIn[1];
-		// c.bodyFd = pipeOut[0];
 	}
 	return pid;
 }
@@ -294,10 +293,18 @@ void RequestHandler::cgiDoneWriting(Connection& c, pollfd_t& pfd) {
 }
 
 void RequestHandler::cgiDoneReading(Connection& c, pollfd_t& pfd) {
+	if (c.cgiReadFd != -1) {
+		close(c.cgiReadFd);
+		c.cgiReadFd = -1;
+	}
 	if (pfd.fd != -1) {
 		pfd.fd = -1;
 	}
-	(void)c;
+	if (c.cgiPid != -1) {
+		kill(c.cgiPid, SIGKILL);
+		waitpid(c.cgiPid, NULL, 0);
+		c.cgiPid = -1;
+	}
 }
 
 void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
@@ -310,7 +317,8 @@ void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
 	std::map<std::string, std::string> cgiHeaders;
 	HTTPParser::parseHeaders(c.cgiWriteBuff.substr(0, headerEnd), cgiHeaders);
 	c.cgiWriteBuff.erase(0, headerEnd);
-	c.res.setBody(c.cgiWriteBuff);
+	if (!c.cgiWriteBuff.empty())
+		c.res.setBody(utils::toChunked(c.cgiWriteBuff));
 	c.cgiWriteBuff.clear();
 
 	c.state = CONN_DONE;
@@ -322,8 +330,7 @@ void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
 		return;
 	}
 	if (cgiHeaders.find("Status") == cgiHeaders.end() || cgiHeaders["Status"].empty()) {
-		c.res = buildErrorResponse(*c.config, 500);
-		return;
+		c.res.setStatusCode(200);
 	} else {
 		std::vector<std::string> statusParts = utils::split(cgiHeaders["Status"], ' ');
 		if (statusParts.size() < 2) {
@@ -332,18 +339,21 @@ void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
 			return;
 		}
 		c.res.setStatusCode(std::stoul(statusParts[0]));
-		for (size_t i = 1; i < statusParts.size(); ++i) {
-			c.res.setReasonPhrase(c.res.getReasonPhrase() + statusParts[i] + (i != statusParts.size() - 1 ? " " : ""));
-		}
+		std::string reasonPhrase;
+		for (size_t i = 1; i < statusParts.size(); ++i) 
+			reasonPhrase += statusParts[i] + (i != statusParts.size() - 1 ? " " : "");
+		c.res.setReasonPhrase(reasonPhrase);
 	}
 	for (std::map<std::string, std::string>::const_iterator it = cgiHeaders.begin(); it != cgiHeaders.end(); ++it) {
 		if (it->first == "Status")
 			continue;
 		c.res.addHeader(it->first, it->second);
+		c.res.addHeader("Transfer-Encoding", "chunked");
+		Logger::debug("added CGI header: " + it->first + ": " + it->second);
 	}
 
 	c.writeBuff = c.res.serialize();
-	c.bodyFd = c.cgiReadFd;
+	c.nmft = UPLOAD_WRITE_BODY;
 	return;
 }
 

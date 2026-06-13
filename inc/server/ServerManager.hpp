@@ -43,6 +43,8 @@ class ServerManager {
 		ServerManager& operator=(const ServerManager& other);
 		~ServerManager();
 
+		pollfd_t* getConnetionPfd(Connection& c);
+
 		void setup(void);
 		void run(void);
 };

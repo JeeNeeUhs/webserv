@@ -32,6 +32,18 @@ std::string utils::trimCharset(const std::string& s, const std::string& charSet)
 	return s.substr(start, end - start + 1);
 }
 
+std::string utils::toHex(int value) {
+	std::ostringstream ss;
+	ss << std::hex << value;
+	return ss.str();
+}
+
+std::string utils::toChunked(const std::string& body) {
+	if (body.empty())
+		return "0\r\n\r\n";
+	return toHex(body.size()) + "\r\n" + body + "\r\n";
+}
+
 unsigned int utils::parseAddr(const std::string& host) {
 	if (host == "0.0.0.0")
 		return INADDR_ANY;

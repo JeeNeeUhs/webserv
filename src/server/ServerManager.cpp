@@ -180,19 +180,26 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 		}
 	}
 
-	if (c.writeBuff.empty())
+	if (c.writeBuff.empty() && c.cgiReadFd == -1)
 		return false;
-
-	int bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), MSG_NOSIGNAL);
+	
+	int bytes = 0;
+	if (!c.writeBuff.empty()) {
+		bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), MSG_NOSIGNAL);
+		Logger::debug("sent " + utils::toString(bytes) + " bytes to client fd " + utils::toString(fd));
+		// Logger::debug(c.writeBuff);
+	}
 	if (bytes > 0) {
 		c.writeBuff.erase(0, bytes);
-		if (c.writeBuff.empty() && c.bodyFd == -1)
+		if (c.writeBuff.empty() && c.bodyFd == -1 && c.cgiReadFd == -1)
 			return false;
 
 		return true;
 	}
-	else if (bytes == 0) // eof case, close connection
+	else if (bytes == 0 && c.cgiReadFd == -1){ // eof case, close connection
+		Logger::debug("ben kapattim client fd " + utils::toString(fd));
 		return false;
+	}
 
 	return true;
 }
@@ -227,7 +234,6 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		std::string trash;
 		HTTPParser::parseRequestLine(c.readBuff.substr(0, c.readBuff.find("\r\n")), trash, trash, path, trash, trash);
 		if (RequestHandler::isCgiRequest(*RequestHandler::matchLocation(*c.config, path), path)) {
-			// burda confige index index.go gibi seyler cgi dusmuyo bunu hallate kiral
 			c.state = CGI_REQUEST;
 		} else {
 		std::vector<std::string> ct = utils::split(HTTPParser::peekHeader(c.readBuff, "Content-Type"), ';');
@@ -250,8 +256,6 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			_cgiReadFds[c.cgiReadFd] = &c;
 			addPollFd(c.cgiReadFd, POLLIN);
 			addPollFd(c.cgiWriteFd, POLLOUT);
-			// Logger::debug("readbuff");
-			// Logger::debug(c.readBuff);
 		}
 		return true;
 	}
@@ -340,43 +344,24 @@ bool ServerManager::readFromCgi(pollfd_t& pfd, Connection& c) {
 	char chunk[RECV_CHUNK];
 
 	int bytes = read(pfd.fd, chunk, sizeof(chunk));
-	if (bytes > 0) {
+	if (bytes > 0 && c.nmft == UPLOAD_WRITE_BODY) {
+		std::string temp(chunk, bytes);
+		c.writeBuff.append(utils::toChunked(temp));
+		Logger::debug("read " + utils::toString(bytes) + " bytes from cgi for fd " + utils::toString(pfd.fd));
+		return true;
+	} else if (bytes > 0 && c.nmft != UPLOAD_WRITE_BODY) {
 		c.cgiWriteBuff.append(chunk, bytes);
 		Logger::debug("read " + utils::toString(bytes) + " bytes from cgi for fd " + utils::toString(pfd.fd));
-	}
-
-	if (bytes != -1) {
 		std::size_t headerEnd = HTTPParser::findHeaderEnd(c.cgiWriteBuff);
 		if (headerEnd != std::string::npos) {
-			pollfd_t *tempPfd = NULL;
-			std::map<int, Connection>::iterator it;
-			for (it = _connections.begin(); it != _connections.end(); ++it) {
-				if (&it->second == &c) {
-					for (size_t i = 0; i < _pollFds.size(); ++i) {
-						if (_pollFds[i].fd == it->first) {
-							tempPfd = &_pollFds[i];
-							break;
-						}
-					}
-					break;
-				}
-			}
-			// for (size_t i = 0; i < _pollFds.size(); ++i) {
-			// 	std::map<int, Connection>::iterator it = _connections.find(_pollFds[i].fd);
-			// 	if (it != _connections.end() && &it->second == &c) {
-			// 		tempPfd = &_pollFds[i];
-			// 		break;
-			// 	}
-			// }
-
+			pollfd_t *tempPfd = getConnetionPfd(c);
 			RequestHandler::cgiDone(c, *tempPfd);
-			Logger::debug("cgi process for fd " + utils::toString(pfd.fd) + " header fnished");
-			pfd.fd = -1;
-			// c.cgiWriteFd = -1;
-			return false;
+			Logger::debug("cgi process for fd " + utils::toString(pfd.fd) + " header finished");
 		}
-
-		return true;
+	} else if (bytes == 0) {
+		c.writeBuff.append(utils::toChunked(""));
+		Logger::debug("cgi process for fd " + utils::toString(pfd.fd) + " finished reading");
+		return false;
 	}
 
 	return true;
@@ -385,8 +370,6 @@ bool ServerManager::readFromCgi(pollfd_t& pfd, Connection& c) {
 bool ServerManager::writeToCgi(pollfd_t& pfd, Connection& c) {
 	if (c.readBuff.empty())
 		return true;
-
-	Logger::debug("tetiklendim");
 
 	int bytes = write(pfd.fd, c.readBuff.c_str(), c.readBuff.size());
 	if (bytes > 0) {
@@ -402,12 +385,24 @@ bool ServerManager::writeToCgi(pollfd_t& pfd, Connection& c) {
 }
 
 bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
+	// check if the event is for a cgi read/write fd
 	std::map<int, Connection*>::iterator cgiIt;
 	cgiIt = _cgiReadFds.find(pfd.fd);
 	if (cgiIt != _cgiReadFds.end()) {
 		
-		if (!readFromCgi(pfd, *cgiIt->second))
+		if (!readFromCgi(pfd, *cgiIt->second)){
+			Logger::debug("calistim1");
+
+			if (cgiIt->second->state != CONN_DONE) {
+				cgiIt->second->res = buildErrorResponse(*cgiIt->second->config, 500);
+				cgiIt->second->writeBuff = cgiIt->second->res.serialize();
+				cgiIt->second->state = CONN_DONE;
+				pollfd_t *tempPfd = ServerManager::getConnetionPfd(*cgiIt->second);
+				tempPfd->events = POLLOUT;
+				Logger::debug("cgi process for fd " + utils::toString(pfd.fd) + " did not return with header, sending 500 response");
+			}
 			RequestHandler::cgiDoneReading(*cgiIt->second, pfd);
+		}
 		return true;
 	}
 	cgiIt = _cgiWriteFds.find(pfd.fd);
@@ -419,6 +414,7 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	std::map<int, Connection>::iterator it = _connections.find(pfd.fd);
 	if (it == _connections.end())
 		return false;
+
 
 	Connection& c = it->second;
 	
@@ -441,6 +437,20 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	}
 
 	return true;
+}
+
+pollfd_t* ServerManager::getConnetionPfd(Connection& c) {
+	std::map<int, Connection>::iterator it;
+	for (it = _connections.begin(); it != _connections.end(); ++it) {
+		if (&it->second == &c) {
+			for (size_t i = 0; i < _pollFds.size(); ++i) {
+				if (_pollFds[i].fd == it->first)
+					return &_pollFds[i];
+			}
+			break;
+		}
+	}
+	return NULL;
 }
 
 void ServerManager::setup(void) {

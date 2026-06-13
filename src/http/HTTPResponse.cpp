@@ -99,7 +99,7 @@ std::string HTTPResponse::serialize(void) {
 
 	ss << "HTTP/" << _version << ' ' << _statusCode << ' ' << _reasonPhrase << "\r\n";
 
-	if (_headers.find("Content-Length") == _headers.end()) {
+	if (_headers.find("Content-Length") == _headers.end() && _headers.find("Transfer-Encoding") == _headers.end()) {
 		size_t len = _isFileBody ? _fileSize : _body.size();
 		addHeader("Content-Length", utils::toString(len));
 	}
