@@ -267,7 +267,7 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 					c.state = CONN_DONE;
 					pfd.events = POLLOUT;
 					return true;
-				} else if (status == HTTPParser::REQ_COMPLETE)
+				}  else if (status == HTTPParser::REQ_COMPLETE)
 					c.uploadEof = true;
 			}
 			return true;
@@ -277,7 +277,8 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			c.state = CONN_DONE;
 			pfd.events = POLLOUT;
 			return true;
-		}
+		} else if (status == HTTPParser::REQ_COMPLETE)
+			c.uploadEof = true;
 
 		return true;
 	}
