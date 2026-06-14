@@ -284,6 +284,9 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		if (c.readBuff.size() - c.headerLength > c.config->clientMaxBodySize)
 			return setErrorResponse(pfd, c, 413);
 
+		if (!c.req.parse(c.readBuff, c.headerLength))
+			return setErrorResponse(pfd, c, 400);
+
 		c.res = RequestHandler::handle(*c.config, c.req);
 		if (c.res.isFileBody()) {
 			c.bodyFd = open(c.res.getFilePath().c_str(), O_RDONLY);
