@@ -183,16 +183,6 @@ HTTPResponse RequestHandler::handle(const ServerConfig& server, const HTTPReques
 		return StaticHandler::handleGet(*loc, filePath, req.getPath());
 	// else if (req.getMethod() == "POST")
 	// 	return StaticHandler::handlePost();
-	if (req.getMethod() == "POST") {
-		// Logger::debug(req.getUnparsedRequest());
-		if (loc->methods.size() == 1 && loc->methods[0] == "POST" && !loc->uploadStore.empty()) {
-			// if (StaticHandler::uploadToStore(req, loc->uploadStore))
-			// 	return buildErrorResponse(*loc, 201); // created
-			// else
-			// 	return buildErrorResponse(*loc, 500); // internal server error
-		}
-		return buildErrorResponse(*loc, 403); // forbidden, post is not implemented yet
-	}
- 
-	return buildErrorResponse(*loc, 501);	
+
+	return buildErrorResponse(*loc, 501);
 }
