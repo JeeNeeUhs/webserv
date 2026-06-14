@@ -9,7 +9,7 @@ static bool pathExists(const std::string& path) {
 
 	return stat(path.c_str(), &st) == 0;
 }
- 
+
 static bool isDirectory(const std::string& path) {
 	struct stat st;
 	if (stat(path.c_str(), &st) != 0)
@@ -144,4 +144,16 @@ HTTPResponse StaticHandler::handleGet(const LocationConfig& loc, const std::stri
 		return serveDirectory(loc, filePath, requestPath);
 
 	return serveFile(loc, filePath);
+}
+
+HTTPResponse StaticHandler::handleDelete(const LocationConfig& loc, const std::string& filePath) {
+	if (!pathExists(filePath))
+		return buildErrorResponse(loc, 404);
+
+	if (std::remove(filePath.c_str()) != 0)
+		return buildErrorResponse(loc, 500);
+
+	HTTPResponse res;
+	res.setStatusCode(200);
+	return res;
 }

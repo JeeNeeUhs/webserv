@@ -172,17 +172,12 @@ HTTPResponse RequestHandler::handle(const ServerConfig& server, const HTTPReques
 	if (!isMethodAllowed(*loc, req.getMethod()))
 		return buildErrorResponse(*loc, 405);
 
-	std::string filePath = resolvePath( *loc, req.getPath());
-
-	if (isCgiRequest(*loc, req.getPath())) {
-		// TODO: cgi buraya artik
-		return buildErrorResponse(*loc, 501);
-	}
+	std::string filePath = resolvePath(*loc, req.getPath());
 
 	if (req.getMethod() == "GET")
 		return StaticHandler::handleGet(*loc, filePath, req.getPath());
-	// else if (req.getMethod() == "POST")
-	// 	return StaticHandler::handlePost();
+	else if (req.getMethod() == "DELETE")
+		return StaticHandler::handleDelete(*loc, filePath);
 
 	return buildErrorResponse(*loc, 501);
 }

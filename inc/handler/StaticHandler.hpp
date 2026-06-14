@@ -6,6 +6,7 @@
 
 namespace StaticHandler {
 	HTTPResponse handleGet(const LocationConfig& loc, const std::string& filePath, const std::string& requestPath);
+	HTTPResponse handleDelete(const LocationConfig& loc, const std::string& filePath);
 }
 
 HTTPResponse buildErrorResponse(const LocationConfig& config, size_t statusCode);
