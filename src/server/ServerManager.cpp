@@ -257,6 +257,28 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			addPollFd(c.cgiReadFd, POLLIN);
 			addPollFd(c.cgiWriteFd, POLLOUT);
 		}
+		HTTPParser::RequestStatus status = HTTPParser::checkComplete(c);
+		if (status == HTTPParser::REQ_INCOMPLETE) {
+			if (c.req.getHeader("Transfer-Encoding") == "chunked" ) {
+				status = HTTPParser::parseChunkedBody(c.readBuff, c.cgiReadBuff);
+				if (status == HTTPParser::REQ_BAD) {
+					c.res = buildErrorResponse(*c.config, 400);
+					c.writeBuff = c.res.serialize();
+					c.state = CONN_DONE;
+					pfd.events = POLLOUT;
+					return true;
+				} else if (status == HTTPParser::REQ_COMPLETE)
+					c.uploadEof = true;
+			}
+			return true;
+		} else if (status == HTTPParser::REQ_BAD) {
+			c.res = buildErrorResponse(*c.config, 400);
+			c.writeBuff = c.res.serialize();
+			c.state = CONN_DONE;
+			pfd.events = POLLOUT;
+			return true;
+		}
+
 		return true;
 	}
 
@@ -365,13 +387,13 @@ bool ServerManager::readFromCgi(pollfd_t& pfd, Connection& c) {
 }
 
 bool ServerManager::writeToCgi(pollfd_t& pfd, Connection& c) {
-	if (c.readBuff.empty())
+	if (c.cgiReadBuff.empty() && c.uploadEof == false)
 		return true;
 
-	int bytes = write(pfd.fd, c.readBuff.c_str(), c.readBuff.size());
+	int bytes = write(pfd.fd, c.cgiReadBuff.c_str(), c.cgiReadBuff.size());
 	if (bytes > 0) {
 		Logger::debug("wrote " + utils::toString(bytes) + " bytes to cgi for fd " + utils::toString(pfd.fd));
-		c.readBuff.erase(0, bytes);
+		c.cgiReadBuff.erase(0, bytes);
 		return true;
 	} else if (bytes == 0) {
 		Logger::debug("cgi process for fd " + utils::toString(pfd.fd) + " finished writing");

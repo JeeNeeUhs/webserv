@@ -28,8 +28,8 @@ static bool isChunked(const std::string& transferEncoding) {
 	return HTTPParser::toLower(transferEncoding).find("chunked") != std::string::npos;
 }
 
-static HTTPParser::RequestStatus chunkedStatus(const std::string& buffer, size_t from) {
-	size_t pos = from;
+static HTTPParser::RequestStatus chunkedStatus(const std::string& buffer) {
+	size_t pos = 0;
 
 	while (pos < buffer.size()) {
 		size_t lineEnd = buffer.find("\r\n", pos);
@@ -115,59 +115,109 @@ size_t HTTPParser::findHeaderEnd(const std::string& buffer) {
 	return pos + 4;
 }
 
-HTTPParser::RequestStatus HTTPParser::checkComplete(const std::string& buffer, std::size_t headerEnd) {
-	std::string rawHeaders = buffer.substr(0, headerEnd);
+HTTPParser::RequestStatus HTTPParser::checkComplete(Connection& c) {
+	
 
-	std::string te = peekHeader(rawHeaders, "Transfer-Encoding");
+	std::string te = c.req.getHeader("Transfer-Encoding");
 	if (isChunked(te))
-		return chunkedStatus(buffer, headerEnd);
+		return chunkedStatus(c.readBuff);
 
-	std::string cl = peekHeader(rawHeaders, "Content-Length");
-	if (!cl.empty()) {
-		std::size_t len = 0;
-		try {
-			len = utils::parseNum<std::size_t>(cl);
-		} catch (...) {
-			return REQ_BAD;
+	if (c.contentLength == static_cast<size_t>(-1)) {
+		std::string cl = c.req.getHeader("Content-Length");
+		if (!cl.empty()) {
+			try {
+				c.contentLength = utils::parseNum<size_t>(cl);
+			} catch (...) {
+				return REQ_BAD;
+			}
 		}
-		std::size_t bodyHave = buffer.size() - headerEnd;
-		return (bodyHave >= len) ? REQ_COMPLETE : REQ_INCOMPLETE;
+		c.cgiBytesWritten = 0;
+	}
+
+	if (c.contentLength != static_cast<size_t>(-1)) {
+		c.cgiBytesWritten += c.readBuff.size();
+		c.cgiReadBuff.append(c.readBuff);
+		c.readBuff.clear();
+		if (c.cgiBytesWritten < c.contentLength)
+			return REQ_INCOMPLETE;
+		else if (c.cgiBytesWritten > c.contentLength)
+			return REQ_BAD;
 	}
 
 	return REQ_COMPLETE;
 }
 
-bool HTTPParser::parseChunkedBody(const std::string& raw, std::string& body) {
-	body.clear();
-	size_t pos = 0;
-
-	while (pos < raw.size()) {
-		size_t lineEnd = raw.find("\r\n", pos);
-		if (lineEnd == std::string::npos)
+static bool parseChunkSize(const std::string& s, std::size_t& out)
+{
+	if (s.empty())
+		return false;
+	std::size_t result = 0;
+	for (std::size_t i = 0; i < s.size(); ++i)
+	{
+		char c = s[i];
+		int digit;
+		if (c >= '0' && c <= '9')
+			digit = c - '0';
+		else if (c >= 'a' && c <= 'f')
+			digit = c - 'a' + 10;
+		else if (c >= 'A' && c <= 'F')
+			digit = c - 'A' + 10;
+		else
 			return false;
-
-		std::string sizeStr = raw.substr(pos, lineEnd - pos);
-		size_t semiPos = sizeStr.find(';');
-		if (semiPos != std::string::npos)
-			sizeStr = sizeStr.substr(0, semiPos);
-
-		char* endPtr = NULL;
-		long chunkSize = std::strtol(sizeStr.c_str(), &endPtr, 16);
-		if (endPtr == sizeStr.c_str() || chunkSize < 0)
+		if (result > (std::numeric_limits<std::size_t>::max() - digit) / 16)
 			return false;
-		if (chunkSize == 0)
-			return true;
-
-		pos = lineEnd + 2;
-		size_t uChunkSize = static_cast<size_t>(chunkSize);
-		if (pos + uChunkSize > raw.size())
-			return false;
-
-		body.append(raw, pos, uChunkSize);
-		pos += uChunkSize + 2;
+		result = result * 16 + digit;
 	}
+	out = result;
+	return true;
+}
 
-	return false;
+HTTPParser::RequestStatus HTTPParser::parseChunkedBody(std::string& raw, std::string& body) {
+	std::size_t pos = 0;
+
+	while (true) {
+		std::size_t lineEnd = raw.find("\r\n", pos);
+		if (lineEnd == std::string::npos) {
+			raw.erase(0, pos);
+			return REQ_INCOMPLETE;
+		}
+
+		std::string sizeLine = raw.substr(pos, lineEnd - pos);
+		std::size_t semicolon = sizeLine.find(';');
+		std::string hexStr = (semicolon == std::string::npos) ? sizeLine : sizeLine.substr(0, semicolon);
+
+		std::size_t chunkSize;
+		if (!parseChunkSize(hexStr, chunkSize))
+			return REQ_BAD;
+
+		if (chunkSize == 0) {
+			std::size_t tpos = lineEnd + 2;
+			while (true) {
+				std::size_t tEnd = raw.find("\r\n", tpos);
+				if (tEnd == std::string::npos) {
+					raw.erase(0, pos);
+					return REQ_INCOMPLETE;
+				}
+				if (tEnd == tpos) {
+					raw.erase(0, tEnd + 2);
+					return REQ_COMPLETE;
+				}
+				tpos = tEnd + 2;
+			}
+		}
+
+		std::size_t dataStart = lineEnd + 2;
+		if (raw.size() < dataStart + chunkSize + 2) {
+			raw.erase(0, pos);
+			return REQ_INCOMPLETE;
+		}
+
+		if (raw[dataStart + chunkSize] != '\r' || raw[dataStart + chunkSize + 1] != '\n')
+			return REQ_BAD;
+
+		body.append(raw, dataStart, chunkSize);
+		pos = dataStart + chunkSize + 2;
+	}
 }
 
 bool HTTPParser::parseRequestLine(const std::string& line, std::string& method,
@@ -228,7 +278,7 @@ bool HTTPParser::parseHeaders(const std::string& rawHeaders, std::map<std::strin
 	return true;
 }
 
-bool HTTPParser::parseBody(const std::string& rawBody, const std::map<std::string, std::string>& headers, std::string& body) {
+bool HTTPParser::parseBody(std::string& rawBody, const std::map<std::string, std::string>& headers, std::string& body) {
 	std::string te = (headers.find("Transfer-Encoding") != headers.end())
 		? headers.find("Transfer-Encoding")->second : "";
 

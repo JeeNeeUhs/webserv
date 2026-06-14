@@ -49,6 +49,9 @@ struct Connection {
 	int			cgiReadFd;
 	int			cgiWriteFd;
 	std::string	cgiWriteBuff;
+	std::string	cgiReadBuff;
+	size_t		contentLength;
+	size_t		cgiBytesWritten;
 
 	UploadState					nmft; //firs time, no no not my first time
 	std::string					boundary;
@@ -69,6 +72,8 @@ struct Connection {
 		cgiPid(-1),
 		cgiReadFd(-1),
 		cgiWriteFd(-1),
+		contentLength(-1),
+		cgiBytesWritten(-1),
 		nmft(UPLOAD_INIT),
 		uploadEof(false) {}
 };
