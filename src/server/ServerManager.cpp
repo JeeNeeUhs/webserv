@@ -277,6 +277,12 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			c.state = CONN_DONE;
 			pfd.events = POLLOUT;
 			return true;
+		} else if (status == HTTPParser::REQ_TOO_LARGE) {
+			c.res = buildErrorResponse(*c.config, 413);
+			c.writeBuff = c.res.serialize();
+			c.state = CONN_DONE;
+			pfd.events = POLLOUT;
+			return true;
 		} else if (status == HTTPParser::REQ_COMPLETE)
 			c.uploadEof = true;
 
@@ -304,8 +310,8 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	}
 
 	if (c.state == READING_BODY) {
-		if (c.readBuff.size() - c.headerLength > c.config->clientMaxBodySize)
-			return setErrorResponse(pfd, c, 413);
+		// if (c.readBuff.size() - c.headerLength > c.config->clientMaxBodySize)
+		// 	return setErrorResponse(pfd, c, 413);
 
 		if (!c.req.parse(c.readBuff, c.headerLength))
 			return setErrorResponse(pfd, c, 400);

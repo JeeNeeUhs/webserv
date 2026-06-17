@@ -9,6 +9,7 @@ namespace HTTPParser {
 	enum RequestStatus {
 		REQ_COMPLETE,
 		REQ_INCOMPLETE,
+		REQ_TOO_LARGE,
 		REQ_BAD
 	};
 

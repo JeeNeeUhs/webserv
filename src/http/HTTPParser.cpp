@@ -116,8 +116,6 @@ size_t HTTPParser::findHeaderEnd(const std::string& buffer) {
 }
 
 HTTPParser::RequestStatus HTTPParser::checkComplete(Connection& c) {
-	
-
 	std::string te = c.req.getHeader("Transfer-Encoding");
 	if (isChunked(te))
 		return chunkedStatus(c.readBuff);
@@ -138,7 +136,9 @@ HTTPParser::RequestStatus HTTPParser::checkComplete(Connection& c) {
 		c.cgiBytesWritten += c.readBuff.size();
 		c.cgiReadBuff.append(c.readBuff);
 		c.readBuff.clear();
-		if (c.cgiBytesWritten < c.contentLength)
+		if (c.cgiBytesWritten > c.config->clientMaxBodySize)
+			return REQ_TOO_LARGE;
+		else if (c.cgiBytesWritten < c.contentLength)
 			return REQ_INCOMPLETE;
 		else if (c.cgiBytesWritten > c.contentLength)
 			return REQ_BAD;
@@ -214,7 +214,7 @@ HTTPParser::RequestStatus HTTPParser::parseChunkedBody(std::string& raw, std::st
 
 		if (raw[dataStart + chunkSize] != '\r' || raw[dataStart + chunkSize + 1] != '\n')
 			return REQ_BAD;
-
+		
 		body.append(raw, dataStart, chunkSize);
 		pos = dataStart + chunkSize + 2;
 	}
