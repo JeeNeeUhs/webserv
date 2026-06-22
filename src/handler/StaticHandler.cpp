@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <sstream>
+#include <cstdio>
 
 static bool pathExists(const std::string& path) {
 	struct stat st;

@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <cctype>
+#include <limits>
 
 static std::string trim(const std::string& s) {
 	size_t start = s.find_first_not_of(" \t");

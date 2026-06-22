@@ -2,6 +2,8 @@
 #include "StaticHandler.hpp"
 #include "Logger.hpp"
 #include "Connection.hpp"
+
+#include <algorithm>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -142,8 +144,11 @@ HTTPResponse RequestHandler::validateUploadRequest(Connection& c) {
 		size_t pos = ct[i].find("boundary=");
 		if (pos != std::string::npos) {
 			c.boundary = "--" + ct[i].substr(pos + 9);
-			while (!c.boundary.empty() && (c.boundary.back() == '\r' || c.boundary.back() == ' ' || c.boundary.back() == '"'))
-				c.boundary.pop_back();
+			while (!c.boundary.empty()
+				&& (c.boundary[c.boundary.size() - 1] == '\r'
+					|| c.boundary[c.boundary.size() - 1] == ' '
+					|| c.boundary[c.boundary.size() - 1] == '"'))
+				c.boundary.erase(c.boundary.size() - 1);
 			break;
 		}
 	}
