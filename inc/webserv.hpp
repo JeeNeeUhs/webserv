@@ -10,13 +10,12 @@
 # define HTTP_VERSION "1.1"
 
 # define POLL_TIMEOUT 1000 // milliseconds (3 seconds)
+# define CGI_TIMEOUT 10
 # define RECV_CHUNK 4 * 1024
 # define SEND_CHUNK 64 * 1024
 
 namespace defaults {
 	const size_t		CLIENT_MAX_BODY_SIZE	= 1024 * 1024;	// 1 MB
-	const size_t		CLIENT_MAX_HEADER_SIZE	= 8 * 1024;		// 8 KB
-	const time_t		CLIENT_HEADER_TIMEOUT	= 60;			// seconds
 	const time_t		CLIENT_BODY_TIMEOUT		= 60;			// seconds
 	const std::string	DEFAULT_ROOT			= "/tmp/webserv";
 	const std::string	DEFAULT_INDEX			= "index.html";

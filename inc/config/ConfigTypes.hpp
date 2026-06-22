@@ -28,9 +28,7 @@ struct LocationConfig {
 struct ServerConfig {
 	std::vector<std::pair<std::string, int> > listens;
 
-	size_t clientMaxHeaderSize;
 	size_t clientMaxBodySize;
-	time_t clientHeaderTimeout;
 	time_t clientBodyTimeout;
 
 	std::string	root;
@@ -44,9 +42,7 @@ struct ServerConfig {
 	std::vector<LocationConfig>	locations;
 
 	ServerConfig()
-		: clientMaxHeaderSize(defaults::CLIENT_MAX_HEADER_SIZE),
-		clientMaxBodySize(defaults::CLIENT_MAX_BODY_SIZE),
-		clientHeaderTimeout(defaults::CLIENT_HEADER_TIMEOUT),
+		: clientMaxBodySize(defaults::CLIENT_MAX_BODY_SIZE),
 		clientBodyTimeout(defaults::CLIENT_BODY_TIMEOUT),
 		root(defaults::DEFAULT_ROOT),
 		index(defaults::DEFAULT_INDEX),

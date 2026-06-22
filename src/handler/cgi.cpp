@@ -370,6 +370,7 @@ void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
 // yukarida yazdigim seyde cgiye yakin olanlar clinet fdleri icin degilde cgi fdsi icin calisir
 // ama biz cgi icin ayri read fln kullanmaktansa ayni fonksiyonlari kullaniyoruz
 HTTPResponse RequestHandler::createCgi(Connection& c) {
+	c.lastActivity = std::time(NULL);
 	c.req.parse(c.readBuff, c.headerLength);
 	c.readBuff.erase(0, c.headerLength);
 	c.loc = matchLocation(*c.config, c.req.getPath());

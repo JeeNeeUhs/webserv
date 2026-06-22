@@ -113,17 +113,14 @@ void ServerManager::checkTimeouts(void) {
 		Connection& c = it->second;
 
 		switch (c.state) {
-			case READING_HEADERS:
-				if (now - c.connStart > c.config->clientHeaderTimeout)
-					c.state = HEADER_TIMEOUT;
-				break;
 			case READING_BODY:
+			case STORING_BODY:
 				if (now - c.lastActivity > c.config->clientBodyTimeout)
 					c.state = BODY_TIMEOUT;
 				break;
 			case CONN_DONE:
 				if (now - c.lastActivity > c.config->clientBodyTimeout)
-					c.state = SEND_TIMEOUT;
+					c.state = (c.cgiPid == -1) ? BODY_TIMEOUT : SEND_TIMEOUT;
 				break;
 			default:
 				break;
@@ -225,9 +222,6 @@ bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c, size_t code) 
 
 bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	if (c.state == READING_HEADERS) {
-		if (c.readBuff.size() > c.config->clientMaxHeaderSize)
-			return setErrorResponse(pfd, c, 431);
-
 		std::size_t headerEnd = HTTPParser::findHeaderEnd(c.readBuff);
 		if (headerEnd == std::string::npos)
 			return true;
@@ -348,8 +342,7 @@ bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 	int bytes = recv(pfd.fd, chunk, sizeof(chunk), 0);
 	if (bytes > 0) {
 		size_t buffSize = c.readBuff.size() + bytes;
-		size_t maxSize = c.config->clientMaxHeaderSize + c.config->clientMaxBodySize;
-		if (buffSize > maxSize)
+		if (buffSize > c.config->clientMaxBodySize)
 			return processBuffer(pfd, c);
 
 		c.readBuff.append(chunk, bytes);
@@ -444,7 +437,6 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	if (it == _connections.end())
 		return false;
 
-
 	Connection& c = it->second;
 	
 	// RST packet, connection reset cases
@@ -462,7 +454,7 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	if (revents & POLLOUT) {
 		if (!sendToClient(pfd.fd, c))
 			return false;
-		c.lastActivity = std::time(NULL);
+		// c.lastActivity = std::time(NULL);
 	}
 
 	return true;
@@ -535,7 +527,6 @@ void ServerManager::run(void) {
 			std::map<int, Connection>::iterator it = _connections.find(pfd.fd);
 			if (it != _connections.end()) {
 				switch (it->second.state) {
-					case HEADER_TIMEOUT:
 					case BODY_TIMEOUT:
 						setErrorResponse(pfd, it->second, 408);
 						continue;
