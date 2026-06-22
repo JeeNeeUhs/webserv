@@ -1,6 +1,7 @@
 #ifndef HTTP_REQUEST_HPP
 # define HTTP_REQUEST_HPP
 
+# include <vector>
 # include <string>
 # include <map>
 

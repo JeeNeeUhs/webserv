@@ -20,8 +20,11 @@ static bool getFilename(const std::string& raw, std::string& filename) {
 		size_t pos = cd[i].find("filename=");
 		if (pos != std::string::npos) {
 			filename = cd[i].substr(pos + 10);
-			while (!filename.empty() && (filename.back() == '\r' || filename.back() == ' '|| filename.back() == '"'))
-				filename.pop_back();
+			while (!filename.empty()
+				&& (filename[filename.size() - 1] == '\r'
+					|| filename[filename.size() - 1] == ' '
+					|| filename[filename.size() - 1] == '"'))
+				filename.erase(filename.size() - 1);
 			return true;
 		}
 	}

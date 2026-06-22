@@ -4,11 +4,14 @@
 #include "webserv.hpp"
 #include "HTTPParser.hpp"
 #include "RequestHandler.hpp"
-#include <signal.h>
 
+#include <algorithm>
+#include <signal.h>
 #include <iostream>
+#include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 
 ServerManager::ServerManager() {}
@@ -512,7 +515,7 @@ void ServerManager::run(void) {
 		if (ready < 0) {
 			if (errno == EINTR)
 				continue;
-			Logger::error(std::string("poll() failed: ") + std::strerror(errno));
+			Logger::error(std::string("poll() failed: ") + strerror(errno));
 			break;
 		}
 

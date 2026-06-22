@@ -8,16 +8,18 @@
 #include "Connection.hpp"
 #include "Logger.hpp"
 #include "ServerManager.hpp"
+#include "HTTPResponse.hpp"
 
 #include <string>
 #include <map>
 #include <vector>
 #include <unistd.h>
 #include <iostream>
-#include "HTTPResponse.hpp"
-#include "fcntl.h"
+#include <fcntl.h>
 #include <signal.h>
-#include <sys/wait.h> // waitpid
+#include <sys/wait.h>
+#include <cstdlib>
+#include <cstring>
 
 // template<typename T>
 // int checkCgiExtentions(const T& data, const std::string& path) {
@@ -42,7 +44,10 @@ static std::map<std::string, std::string> buildEnv(const ServerConfig& data, con
 	std::map<std::string, std::string>::const_iterator it;
 	for (it = req.getQueries().begin(); it != req.getQueries().end(); ++it) {
 		querys += it->first + "=" + it->second;
-		if (std::next(it) != req.getQueries().end())
+		std::map<std::string, std::string>::const_iterator next = it;
+		++next;
+
+		if (next != req.getQueries().end())
 			querys += "&";
 	}
 
@@ -338,7 +343,7 @@ void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
 			c.writeBuff = c.res.serialize();
 			return;
 		}
-		c.res.setStatusCode(std::stoul(statusParts[0]));
+		c.res.setStatusCode(utils::parseNum<size_t>(statusParts[0]));
 		std::string reasonPhrase;
 		for (size_t i = 1; i < statusParts.size(); ++i) 
 			reasonPhrase += statusParts[i] + (i != statusParts.size() - 1 ? " " : "");
@@ -371,7 +376,7 @@ HTTPResponse RequestHandler::createCgi(Connection& c) {
 
 	std::string filePath;
 	if (utils::trimCharset(c.req.getPath(), "/") == utils::trimCharset(c.loc->path, "/")) {
-		if (c.req.getPath().back() != '/')
+		if (c.req.getPath()[c.req.getPath().size() - 1] != '/')
 			filePath = c.loc->root + c.req.getPath() + "/" + c.loc->index;
 		else
 			filePath = c.loc->root + c.req.getPath() + c.loc->index;
