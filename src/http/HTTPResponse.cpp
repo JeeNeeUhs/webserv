@@ -12,6 +12,8 @@ HTTPResponse::HTTPResponse(const HTTPResponse& other) {
 
 HTTPResponse& HTTPResponse::operator=(const HTTPResponse& other) {
 	if (this != &other) {
+		std::string tempCookie;
+
 		_version = other._version;
 		_statusCode = other._statusCode;
 		_reasonPhrase = other._reasonPhrase;
@@ -19,12 +21,13 @@ HTTPResponse& HTTPResponse::operator=(const HTTPResponse& other) {
 		_isFileBody = other._isFileBody;
 		_filePath = other._filePath;
 		_fileSize = other._fileSize;
-		std::string tempCookie;
+		
 		if (_headers.find("Set-Cookie") != _headers.end()) {
 			tempCookie = _headers["Set-Cookie"];
 			_headers = other._headers;
 			_headers["Set-Cookie"] = tempCookie;
-		}
+		} else
+			_headers = other._headers;
 	}
 
 	return *this;

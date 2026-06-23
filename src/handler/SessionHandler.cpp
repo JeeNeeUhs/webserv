@@ -43,7 +43,7 @@ void SessionHandler::createSession(Connection& c) {
 	sessions[sessionID] = newSession;
 	Logger::debug("created new session with ID: " + sessionID);
 	// Add Set-Cookie header to the response
-	c.res.addHeader("Set-Cookie", "sid=" + sessionID + "; Path=/; Max-Age=" + utils::toString(defaults::SESSION_TIMEOUT));
+	c.res.addHeader("Set-Cookie", "sid=" + sessionID + "; Path=/; Max-Age=" + utils::toString(SESSION_TIMEOUT));
 }
 
 void SessionHandler::debugSessionData(std::string sid) {
@@ -82,7 +82,7 @@ void SessionHandler::cleanExpiredSessions() {
 	std::time_t now = std::time(NULL);
 	std::map<std::string, Session>::iterator it = sessions.begin();
 	while (it != sessions.end()) {
-		if (now - it->second.creationTime > defaults::SESSION_TIMEOUT)
+		if (now - it->second.creationTime > SESSION_TIMEOUT)
 			sessions.erase(it++);
 		else
 			++it;
