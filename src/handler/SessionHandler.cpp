@@ -41,20 +41,20 @@ void SessionHandler::createSession(Connection& c) {
 	newSession.creationTime = std::time(NULL);
 	newSession.numOfReq = 1;
 	sessions[sessionID] = newSession;
-	Logger::debug("Created new session with ID: " + sessionID);
+	Logger::debug("created new session with ID: " + sessionID);
 	// Add Set-Cookie header to the response
-	c.res.addHeader("Set-Cookie", "sid=" + sessionID + "; Path=/ ; Max-Age=" + utils::toString(defaults::SESSION_TIMEOUT));
+	c.res.addHeader("Set-Cookie", "sid=" + sessionID + "; Path=/; Max-Age=" + utils::toString(SESSION_TIMEOUT));
 }
 
 void SessionHandler::debugSessionData(std::string sid) {
 	std::map<std::string, Session>::iterator it = sessions.find(sid);
 	if (it != sessions.end()) {
 		const Session& session = it->second;
-		Logger::debug("Session ID: " + session.id);
-		Logger::debug("Creation Time: " + utils::toString(session.creationTime));
-		Logger::debug("Number of Requests: " + utils::toString(session.numOfReq));
+		Logger::debug("session ID: " + session.id);
+		Logger::debug("creation time: " + utils::toString(session.creationTime));
+		Logger::debug("number of requests: " + utils::toString(session.numOfReq));
 	} else {
-		Logger::debug("Session ID not found: " + sid);
+		Logger::debug("session ID not found: " + sid);
 	}
 }
 
@@ -82,7 +82,7 @@ void SessionHandler::cleanExpiredSessions() {
 	std::time_t now = std::time(NULL);
 	std::map<std::string, Session>::iterator it = sessions.begin();
 	while (it != sessions.end()) {
-		if (now - it->second.creationTime > defaults::SESSION_TIMEOUT)
+		if (now - it->second.creationTime > SESSION_TIMEOUT)
 			sessions.erase(it++);
 		else
 			++it;

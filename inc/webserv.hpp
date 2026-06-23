@@ -11,6 +11,7 @@
 
 # define POLL_TIMEOUT 1000 // milliseconds (3 seconds)
 # define CGI_TIMEOUT 10
+# define SESSION_TIMEOUT 10
 # define RECV_CHUNK 4 * 1024
 # define SEND_CHUNK 64 * 1024
 
@@ -20,7 +21,6 @@ namespace defaults {
 	const std::string	DEFAULT_ROOT			= "/tmp/webserv";
 	const std::string	DEFAULT_INDEX			= "index.html";
 	const std::string	DEFAULT_HOST			= "0.0.0.0";
-	const int			SESSION_TIMEOUT			= 3600;			// seconds
 }
 
 namespace CGI {
