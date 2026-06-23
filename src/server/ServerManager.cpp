@@ -207,10 +207,8 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 
 		return true;
 	}
-	else if (bytes == 0 && c.cgiReadFd == -1){ // eof case, close connection
-		Logger::debug("ben kapattim client fd " + utils::toString(fd));
+	else if (bytes == 0 && c.cgiReadFd == -1) // eof case, close connection
 		return false;
-	}
 
 	return true;
 }
@@ -422,8 +420,6 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	if (cgiIt != _cgiReadFds.end()) {
 		
 		if (!readFromCgi(pfd, *cgiIt->second)){
-			Logger::debug("calistim1");
-
 			if (cgiIt->second->state != CONN_DONE) {
 				cgiIt->second->res = buildErrorResponse(*cgiIt->second->config, 500);
 				cgiIt->second->writeBuff = cgiIt->second->res.serialize();
