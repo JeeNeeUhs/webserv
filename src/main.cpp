@@ -9,6 +9,8 @@
 #include <vector>
 #include <signal.h>
 
+bool isTerminated = false;
+
 static std::string parseArgs(int argc, char *argv[]) {
 	std::string filePath;
 
@@ -41,8 +43,14 @@ static void printUsage(const std::string& reason) {
 			<< "Arguments:\n  FILE             optional config file path\n";
 }
 
+static void interruptHandler(int signum) {
+	if (signum == SIGINT)
+		isTerminated = true;
+}
+
 int main(int argc, char *argv[]) {
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGINT, interruptHandler);
 
 	Logger::info("webserv starting...");
 

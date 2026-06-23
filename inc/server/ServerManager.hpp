@@ -9,6 +9,8 @@
 # include <poll.h>
 # include <vector>
 
+extern bool isTerminated;
+
 typedef struct pollfd pollfd_t;
 
 class ServerManager {

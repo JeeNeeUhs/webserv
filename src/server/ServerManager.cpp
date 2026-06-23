@@ -40,6 +40,14 @@ ServerManager::~ServerManager() {
 	for (it = _connections.begin(); it != _connections.end(); ++it) {
 		if (it->second.bodyFd != -1)
 			close(it->second.bodyFd);
+		if (it->second.cgiPid != -1) {
+			kill(it->second.cgiPid, SIGKILL);
+			waitpid(it->second.cgiPid, NULL, 0);
+		}
+		if (it->second.cgiReadFd != -1)
+			close(it->second.cgiReadFd);
+		if (it->second.cgiWriteFd != -1)
+			close(it->second.cgiWriteFd);
 		close(it->first);
 	}
 	_connections.clear();
@@ -503,7 +511,7 @@ void ServerManager::setup(void) {
 }
 
 void ServerManager::run(void) {
-	while (true) {
+	while (!isTerminated) {
 		checkTimeouts();
 
 		int ready = poll(&_pollFds[0], _pollFds.size(), POLL_TIMEOUT);
