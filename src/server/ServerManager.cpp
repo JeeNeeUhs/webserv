@@ -106,7 +106,7 @@ void ServerManager::closeConnection(int& fd) {
 }
 
 void ServerManager::checkTimeouts(void) {
-	// _sessionHandler.cleanExpiredSessions();
+	_sessionHandler.cleanExpiredSessions();
 	std::time_t now = std::time(NULL);
 
 	std::map<int, Connection>::iterator it;

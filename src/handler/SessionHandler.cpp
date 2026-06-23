@@ -80,14 +80,11 @@ void SessionHandler::getOrCreateSession(Connection& c) {
 
 void SessionHandler::cleanExpiredSessions() {
 	std::time_t now = std::time(NULL);
-	std::map<std::string, Session>::iterator it;
-	for (it = sessions.begin(); it != sessions.end(); ++it) {
-		if (now - it->second.creationTime > defaults::SESSION_TIMEOUT) {
-			std::map<std::string, Session>::iterator tempIt = it;
-			++it;
-			sessions.erase(tempIt);
-		} else
+	std::map<std::string, Session>::iterator it = sessions.begin();
+	while (it != sessions.end()) {
+		if (now - it->second.creationTime > defaults::SESSION_TIMEOUT)
+			sessions.erase(it++);
+		else
 			++it;
 	}
 }
-
