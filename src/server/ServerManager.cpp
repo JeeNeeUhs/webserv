@@ -101,6 +101,8 @@ void ServerManager::closeConnection(int& fd) {
 		_connections.erase(it);
 	}
 
+	Logger::debug("closed connection fd " + utils::toString(fd));
+
 	close(fd);
 	fd = -1;
 }
@@ -115,13 +117,14 @@ void ServerManager::checkTimeouts(void) {
 
 		switch (c.state) {
 			case READING_BODY:
+			case READING_HEADERS:
 			case STORING_BODY:
 				if (now - c.lastActivity > c.config->clientBodyTimeout)
 					c.state = BODY_TIMEOUT;
 				break;
 			case CONN_DONE:
 				if (now - c.lastActivity > c.config->clientBodyTimeout)
-					c.state = (c.cgiPid == -1) ? BODY_TIMEOUT : SEND_TIMEOUT;
+					c.state = SEND_TIMEOUT;
 				break;
 			default:
 				break;
@@ -451,13 +454,11 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	if (revents & (POLLIN | POLLHUP)) {
 		if (!readFromClient(pfd, c))
 			return false;
-		c.lastActivity = std::time(NULL);
 	}
 
 	if (revents & POLLOUT) {
 		if (!sendToClient(pfd.fd, c))
 			return false;
-		// c.lastActivity = std::time(NULL);
 	}
 
 	return true;
