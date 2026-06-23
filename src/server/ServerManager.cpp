@@ -229,8 +229,6 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		c.headerLength = headerEnd;
 
 		_sessionHandler.getOrCreateSession(c);
-		// c.res.addHeader("Set-Cookie", "sid=1112asd1; Path=/ ; Max-Age=" + std::to_string(defaults::SESSION_TIMEOUT));
-
 
 		std::string path;
 		std::string trash;
@@ -319,7 +317,6 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			return setErrorResponse(pfd, c, 400);
 
 		c.res = RequestHandler::handle(*c.config, c.req);
-		_sessionHandler.getOrCreateSession(c);
 		if (c.res.isFileBody()) {
 			c.bodyFd = open(c.res.getFilePath().c_str(), O_RDONLY);
 

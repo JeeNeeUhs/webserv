@@ -15,11 +15,16 @@ HTTPResponse& HTTPResponse::operator=(const HTTPResponse& other) {
 		_version = other._version;
 		_statusCode = other._statusCode;
 		_reasonPhrase = other._reasonPhrase;
-		_headers = other._headers;
 		_body = other._body;
 		_isFileBody = other._isFileBody;
 		_filePath = other._filePath;
 		_fileSize = other._fileSize;
+		std::string tempCookie;
+		if (_headers.find("Set-Cookie") != _headers.end()) {
+			tempCookie = _headers["Set-Cookie"];
+			_headers = other._headers;
+			_headers["Set-Cookie"] = tempCookie;
+		}
 	}
 
 	return *this;

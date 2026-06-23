@@ -43,7 +43,7 @@ void SessionHandler::createSession(Connection& c) {
 	sessions[sessionID] = newSession;
 	Logger::debug("Created new session with ID: " + sessionID);
 	// Add Set-Cookie header to the response
-	c.res.addHeader("Set-Cookie", "sid=" + sessionID + "; Path=/ ; Max-Age=" + std::to_string(defaults::SESSION_TIMEOUT));
+	c.res.addHeader("Set-Cookie", "sid=" + sessionID + "; Path=/ ; Max-Age=" + utils::toString(defaults::SESSION_TIMEOUT));
 }
 
 void SessionHandler::debugSessionData(std::string sid) {
@@ -51,8 +51,8 @@ void SessionHandler::debugSessionData(std::string sid) {
 	if (it != sessions.end()) {
 		const Session& session = it->second;
 		Logger::debug("Session ID: " + session.id);
-		Logger::debug("Creation Time: " + std::to_string(session.creationTime));
-		Logger::debug("Number of Requests: " + std::to_string(session.numOfReq));
+		Logger::debug("Creation Time: " + utils::toString(session.creationTime));
+		Logger::debug("Number of Requests: " + utils::toString(session.numOfReq));
 	} else {
 		Logger::debug("Session ID not found: " + sid);
 	}
