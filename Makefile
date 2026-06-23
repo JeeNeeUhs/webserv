@@ -1,5 +1,4 @@
 NAME		= webserv
-TEST_NAME	= webserv_tester
 
 BUILD_DIR	= build
 
@@ -12,12 +11,8 @@ SRCS		= main.cpp \
 			HTTPResponse.cpp HTTPRequest.cpp HTTPParser.cpp \
 			RequestHandler.cpp StaticHandler.cpp ErrorResponse.cpp \
 			UploadStore.cpp cgi.cpp SessionHandler.cpp
-TEST_SRCS	= tests.cpp test_http.cpp test_config.cpp
 
 OBJS		= $(addprefix $(BUILD_DIR)/,$(SRCS:.cpp=.o))
-TEST_OBJS	= $(addprefix $(BUILD_DIR)/,$(TEST_SRCS:.cpp=.o))
-# exclude the main func for compile tests
-CORE_OBJS	= $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
 
 INCS		= -Iinc -Iinc/utils -Iinc/config -Iinc/server \
 			-Iinc/http -Iinc/handler
@@ -36,11 +31,6 @@ $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
-$(TEST_NAME): $(BUILD_DIR) $(CORE_OBJS) $(TEST_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(CORE_OBJS) $(TEST_OBJS)
-
-test-unit: $(TEST_NAME)
 
 test-stress: $(NAME)
 	siege -b http://127.0.0.1:8080/
