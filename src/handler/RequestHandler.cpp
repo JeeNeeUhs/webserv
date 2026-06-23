@@ -2,6 +2,7 @@
 #include "StaticHandler.hpp"
 #include "Logger.hpp"
 #include "Connection.hpp"
+#include "utils.hpp"
 
 #include <algorithm>
 #include <sys/stat.h>
@@ -120,6 +121,19 @@ HTTPResponse RequestHandler::validateUploadRequest(Connection& c) {
 	if (!c.loc)
 		return buildErrorResponse(*c.config, 404);
 
+	size_t contentLength = 0;
+	std::string contentLengthStr = c.req.getHeader("Content-Length");
+	if (!contentLengthStr.empty()) {
+		try {
+			contentLength = utils::parseNum<size_t>(contentLengthStr);
+		} catch (const std::exception& e) {
+			return buildErrorResponse(*c.loc, 400);
+		}
+	}
+	
+	if (contentLength > c.config->clientMaxBodySize)
+		return buildErrorResponse(*c.loc, 413);
+
 	if (c.loc->redirect.first != 0) {
 		HTTPResponse res;
 		res.setStatusCode(c.loc->redirect.first);
@@ -154,6 +168,8 @@ HTTPResponse RequestHandler::validateUploadRequest(Connection& c) {
 	}
 	if (c.boundary.empty())
 		return buildErrorResponse(*c.loc, 400);
+
+	
 
 	c.nmft = UPLOAD_FIND_BOUNDARY;
 	return HTTPResponse();

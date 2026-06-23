@@ -196,9 +196,7 @@ void Config::debugPrintServer(const ServerConfig& srv) const {
 	} else
 		Logger::debug("    (empty)");
 
-	Logger::debug("  client_max_header_size: " + utils::toString(srv.clientMaxHeaderSize));
 	Logger::debug("  client_max_body_size: " + utils::toString(srv.clientMaxBodySize));
-	Logger::debug("  client_header_timeout: " + utils::toString(srv.clientHeaderTimeout));
 	Logger::debug("  client_body_timeout: " + utils::toString(srv.clientBodyTimeout));
 
 	Logger::debug("  error_pages:");

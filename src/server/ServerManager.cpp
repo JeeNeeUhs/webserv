@@ -40,6 +40,14 @@ ServerManager::~ServerManager() {
 	for (it = _connections.begin(); it != _connections.end(); ++it) {
 		if (it->second.bodyFd != -1)
 			close(it->second.bodyFd);
+		if (it->second.cgiPid != -1) {
+			kill(it->second.cgiPid, SIGKILL);
+			waitpid(it->second.cgiPid, NULL, 0);
+		}
+		if (it->second.cgiReadFd != -1)
+			close(it->second.cgiReadFd);
+		if (it->second.cgiWriteFd != -1)
+			close(it->second.cgiWriteFd);
 		close(it->first);
 	}
 	_connections.clear();
@@ -101,11 +109,14 @@ void ServerManager::closeConnection(int& fd) {
 		_connections.erase(it);
 	}
 
+	Logger::debug("closed connection fd " + utils::toString(fd));
+
 	close(fd);
 	fd = -1;
 }
 
 void ServerManager::checkTimeouts(void) {
+	_sessionHandler.cleanExpiredSessions();
 	std::time_t now = std::time(NULL);
 
 	std::map<int, Connection>::iterator it;
@@ -113,11 +124,9 @@ void ServerManager::checkTimeouts(void) {
 		Connection& c = it->second;
 
 		switch (c.state) {
-			case READING_HEADERS:
-				if (now - c.connStart > c.config->clientHeaderTimeout)
-					c.state = HEADER_TIMEOUT;
-				break;
 			case READING_BODY:
+			case READING_HEADERS:
+			case STORING_BODY:
 				if (now - c.lastActivity > c.config->clientBodyTimeout)
 					c.state = BODY_TIMEOUT;
 				break;
@@ -190,7 +199,6 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 	if (!c.writeBuff.empty()) {
 		bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), MSG_NOSIGNAL);
 		Logger::debug("sent " + utils::toString(bytes) + " bytes to client fd " + utils::toString(fd));
-		// Logger::debug(c.writeBuff);
 	}
 	if (bytes > 0) {
 		c.writeBuff.erase(0, bytes);
@@ -211,7 +219,6 @@ bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c, size_t code) 
 	c.res = buildErrorResponse(*c.config, code);
 	c.writeBuff = c.res.serialize();
 
-	// logging
 	std::string method = c.req.getMethod().empty() ? "-" : c.req.getMethod();
 	std::string path = c.req.getPath().empty() ? "-" : c.req.getPath();
 	Logger::info(method + " " + path + " " + utils::toString(code));
@@ -225,13 +232,12 @@ bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c, size_t code) 
 
 bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	if (c.state == READING_HEADERS) {
-		if (c.readBuff.size() > c.config->clientMaxHeaderSize)
-			return setErrorResponse(pfd, c, 431);
-
 		std::size_t headerEnd = HTTPParser::findHeaderEnd(c.readBuff);
 		if (headerEnd == std::string::npos)
 			return true;
 		c.headerLength = headerEnd;
+
+		_sessionHandler.getOrCreateSession(c);
 
 		std::string path;
 		std::string trash;
@@ -313,9 +319,6 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	}
 
 	if (c.state == READING_BODY) {
-		// if (c.readBuff.size() - c.headerLength > c.config->clientMaxBodySize)
-		// 	return setErrorResponse(pfd, c, 413);
-
 		if (!c.req.parse(c.readBuff, c.headerLength))
 			return setErrorResponse(pfd, c, 400);
 
@@ -348,8 +351,7 @@ bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 	int bytes = recv(pfd.fd, chunk, sizeof(chunk), 0);
 	if (bytes > 0) {
 		size_t buffSize = c.readBuff.size() + bytes;
-		size_t maxSize = c.config->clientMaxHeaderSize + c.config->clientMaxBodySize;
-		if (buffSize > maxSize)
+		if (buffSize > c.config->clientMaxBodySize)
 			return processBuffer(pfd, c);
 
 		c.readBuff.append(chunk, bytes);
@@ -444,7 +446,6 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	if (it == _connections.end())
 		return false;
 
-
 	Connection& c = it->second;
 	
 	// RST packet, connection reset cases
@@ -456,13 +457,11 @@ bool ServerManager::handleClient(pollfd_t& pfd, short revents) {
 	if (revents & (POLLIN | POLLHUP)) {
 		if (!readFromClient(pfd, c))
 			return false;
-		c.lastActivity = std::time(NULL);
 	}
 
 	if (revents & POLLOUT) {
 		if (!sendToClient(pfd.fd, c))
 			return false;
-		c.lastActivity = std::time(NULL);
 	}
 
 	return true;
@@ -507,7 +506,7 @@ void ServerManager::setup(void) {
 }
 
 void ServerManager::run(void) {
-	while (true) {
+	while (!isTerminated) {
 		checkTimeouts();
 
 		int ready = poll(&_pollFds[0], _pollFds.size(), POLL_TIMEOUT);
@@ -535,7 +534,6 @@ void ServerManager::run(void) {
 			std::map<int, Connection>::iterator it = _connections.find(pfd.fd);
 			if (it != _connections.end()) {
 				switch (it->second.state) {
-					case HEADER_TIMEOUT:
 					case BODY_TIMEOUT:
 						setErrorResponse(pfd, it->second, 408);
 						continue;

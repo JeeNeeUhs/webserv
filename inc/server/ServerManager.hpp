@@ -4,9 +4,12 @@
 # include "ConfigTypes.hpp"
 # include "Listener.hpp"
 # include "Connection.hpp"
+# include "SessionHandler.hpp"
 
 # include <poll.h>
 # include <vector>
+
+extern bool isTerminated;
 
 typedef struct pollfd pollfd_t;
 
@@ -19,6 +22,8 @@ class ServerManager {
 		std::map<int, Connection>	_connections;
 		std::map<int, Connection*>	_cgiReadFds; //cgi read fd to connection fd
 		std::map<int, Connection*>	_cgiWriteFds; //cgi write fd to connection fd
+
+		SessionHandler _sessionHandler;
 
 		void checkTimeouts(void);
 		void acceptClients(int listenFd);

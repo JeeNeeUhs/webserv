@@ -170,12 +170,8 @@ void ConfigParser::parseServerDirective(ServerConfig& srv, LocationConfig& baseL
 	if (directive == "listen")
 		// host/port splitting will be in Config::validate 
 		srv.listens.push_back(std::make_pair(_curr, 0));
-	else if (directive == "client_max_header_size")
-		srv.clientMaxHeaderSize = utils::parseNum<size_t>(_curr);
 	else if (directive == "client_max_body_size")
 		srv.clientMaxBodySize = utils::parseNum<size_t>(_curr);
-	else if (directive == "client_header_timeout")
-		srv.clientHeaderTimeout = utils::parseNum<time_t>(_curr);
 	else if (directive == "client_body_timeout")
 		srv.clientBodyTimeout = utils::parseNum<time_t>(_curr);
 	else if (directive == "root") {
