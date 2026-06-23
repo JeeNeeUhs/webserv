@@ -106,6 +106,7 @@ void ServerManager::closeConnection(int& fd) {
 }
 
 void ServerManager::checkTimeouts(void) {
+	// _sessionHandler.cleanExpiredSessions();
 	std::time_t now = std::time(NULL);
 
 	std::map<int, Connection>::iterator it;
@@ -227,6 +228,10 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			return true;
 		c.headerLength = headerEnd;
 
+		_sessionHandler.getOrCreateSession(c);
+		// c.res.addHeader("Set-Cookie", "sid=1112asd1; Path=/ ; Max-Age=" + std::to_string(defaults::SESSION_TIMEOUT));
+
+
 		std::string path;
 		std::string trash;
 		HTTPParser::parseRequestLine(c.readBuff.substr(0, c.readBuff.find("\r\n")), trash, trash, path, trash, trash);
@@ -314,6 +319,7 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 			return setErrorResponse(pfd, c, 400);
 
 		c.res = RequestHandler::handle(*c.config, c.req);
+		_sessionHandler.getOrCreateSession(c);
 		if (c.res.isFileBody()) {
 			c.bodyFd = open(c.res.getFilePath().c_str(), O_RDONLY);
 

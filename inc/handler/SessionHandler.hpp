@@ -3,30 +3,35 @@
 
 # include <map>
 # include <string>
+# include <cstdlib>
 # include <ctime>
+# include "Connection.hpp"
 
 struct Session {
 	std::string id;
-	std::string clientIP;
+	std::time_t creationTime;
+	int numOfReq;
 	// std::time_t lastActivity;
 };
 
 class SessionHandler {
 	private:
 		std::map<std::string, Session> sessions;
+
 		std::string generateSessionID();
+		void createSession(Connection& c);
+		// void execute();
+		void debugSessionData(std::string sid);
 	public:
 		SessionHandler();
 		SessionHandler(const SessionHandler& other);
+
 		SessionHandler& operator=(const SessionHandler& other);
+
 		~SessionHandler();
 
-		std::string getOrCreateSession(const std::string& clientIP);
-		// void checkSessionTimeouts();
-
-
+		void getOrCreateSession(Connection& c);
+		void cleanExpiredSessions();
 };
-
-
 
 #endif	

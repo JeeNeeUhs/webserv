@@ -20,6 +20,7 @@ namespace defaults {
 	const std::string	DEFAULT_ROOT			= "/tmp/webserv";
 	const std::string	DEFAULT_INDEX			= "index.html";
 	const std::string	DEFAULT_HOST			= "0.0.0.0";
+	const int			SESSION_TIMEOUT			= 3600;			// seconds
 }
 
 namespace CGI {
