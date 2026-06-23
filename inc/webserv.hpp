@@ -10,8 +10,8 @@
 # define HTTP_VERSION "1.1"
 
 # define POLL_TIMEOUT 1000 // milliseconds (3 seconds)
-# define CGI_TIMEOUT 10
-# define SESSION_TIMEOUT 10
+# define CGI_TIMEOUT 30
+# define SESSION_TIMEOUT 60
 # define RECV_CHUNK 4 * 1024
 # define SEND_CHUNK 64 * 1024
 
