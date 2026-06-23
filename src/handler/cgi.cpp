@@ -21,6 +21,8 @@
 #include <cstdlib>
 #include <cstring>
 
+extern char **environ;
+
 // template<typename T>
 // int checkCgiExtentions(const T& data, const std::string& path) {
 // 	std::vector<std::string> cgi_extensions = data.getCgiExtensions();
@@ -35,6 +37,17 @@
 
 static std::map<std::string, std::string> buildEnv(const ServerConfig& data, const LocationConfig& location, const HTTPRequest& req) {
 	std::map<std::string, std::string> env;
+
+	for (char** envEntry = environ; *envEntry != NULL; ++envEntry) {
+		std::string entry(*envEntry);
+		size_t pos = entry.find('=');
+
+		if (pos != std::string::npos) {
+			std::string key = entry.substr(0, pos);
+			std::string value = entry.substr(pos + 1);
+			env[key] = value;
+		}
+	}
 
 	env["SERVER_PROTOCOL"] = CGI::SERVER_PROTOCOL;
 	env["SERVER_SOFTWARE"] = CGI::SERVER_SOFTWARE;
