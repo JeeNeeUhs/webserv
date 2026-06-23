@@ -11,7 +11,6 @@ struct Session {
 	std::string id;
 	std::time_t creationTime;
 	int numOfReq;
-	// std::time_t lastActivity;
 };
 
 class SessionHandler {
@@ -20,7 +19,6 @@ class SessionHandler {
 
 		std::string generateSessionID();
 		void createSession(Connection& c);
-		// void execute();
 		void debugSessionData(std::string sid);
 	public:
 		SessionHandler();

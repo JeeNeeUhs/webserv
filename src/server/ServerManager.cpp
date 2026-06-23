@@ -199,7 +199,6 @@ bool ServerManager::sendToClient(int fd, Connection& c) {
 	if (!c.writeBuff.empty()) {
 		bytes = send(fd, c.writeBuff.c_str(), c.writeBuff.size(), MSG_NOSIGNAL);
 		Logger::debug("sent " + utils::toString(bytes) + " bytes to client fd " + utils::toString(fd));
-		// Logger::debug(c.writeBuff);
 	}
 	if (bytes > 0) {
 		c.writeBuff.erase(0, bytes);
@@ -220,7 +219,6 @@ bool ServerManager::setErrorResponse(pollfd_t& pfd, Connection& c, size_t code) 
 	c.res = buildErrorResponse(*c.config, code);
 	c.writeBuff = c.res.serialize();
 
-	// logging
 	std::string method = c.req.getMethod().empty() ? "-" : c.req.getMethod();
 	std::string path = c.req.getPath().empty() ? "-" : c.req.getPath();
 	Logger::info(method + " " + path + " " + utils::toString(code));
@@ -321,9 +319,6 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	}
 
 	if (c.state == READING_BODY) {
-		// if (c.readBuff.size() - c.headerLength > c.config->clientMaxBodySize)
-		// 	return setErrorResponse(pfd, c, 413);
-
 		if (!c.req.parse(c.readBuff, c.headerLength))
 			return setErrorResponse(pfd, c, 400);
 

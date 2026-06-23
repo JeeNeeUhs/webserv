@@ -23,18 +23,6 @@
 
 extern char **environ;
 
-// template<typename T>
-// int checkCgiExtentions(const T& data, const std::string& path) {
-// 	std::vector<std::string> cgi_extensions = data.getCgiExtensions();
-// 	for (size_t i = 0; i < cgi_extensions.size(); ++i) {
-// 		if (path.size() >= cgi_extensions[i].size() &&
-// 			path.compare(path.size() - cgi_extensions[i].size(), cgi_extensions[i].size(), cgi_extensions[i]) == 0) {
-// 			return i;
-// 		}
-// 	}
-// 	return -1;
-// }
-
 static std::map<std::string, std::string> buildEnv(const ServerConfig& data, const LocationConfig& location, const HTTPRequest& req) {
 	std::map<std::string, std::string> env;
 
@@ -96,57 +84,6 @@ static std::map<std::string, std::string> buildEnv(const ServerConfig& data, con
 	}
 
 	return env;
-
-
-	// env.push_back("SERVER_PROTOCOL=" + CGI::SERVER_PROTOCOL);
-	// env.push_back("SERVER_SOFTWARE=" + CGI::SERVER_SOFTWARE);
-	// env.push_back("GATEWAY_INTERFACE=" + CGI::GATEWAY_INTERFACE);
-
-	// std::string methods;
-	// for (size_t i = 0; i < location.methods.size(); ++i) {
-	// 	methods += location.methods[i];
-	// 	if (i != location.methods.size() - 1)
-	// 		methods += ",";
-	// }
-
-	// std::string querys;
-	// std::map<std::string, std::string>::const_iterator it;
-	// for (it = req.getQueries().begin(); it != req.getQueries().end(); ++it) {
-	// 	querys += it->first + "=" + it->second;
-	// 	if (std::next(it) != req.getQueries().end())
-	// 		querys += "&";
-	// }
-
-	// std::string scriptName;
-	// if (req.getPath() == location.path) {
-	// 	scriptName = location.root + "/" + location.index;
-	// } else {
-	// 	scriptName = location.root + req.getPath();
-	// }
-
-	// env.push_back("REQUEST_METHOD=" + methods);
-	// env.push_back("QUERY_STRING=" + querys);
-	// env.push_back("SCRIPT_NAME=" + scriptName);
-	// env.push_back("SERVER_PORT=" + utils::toString(data.listens[0].second));
-	// env.push_back("REMOTE_ADDR=");//sanirim su anda alamiyoruz ama bir yolu bulunacak
-	// env.push_back("CONTENT_TYPE=" + req.getHeader("Content-Type"));
-	// env.push_back("CONTENT_LENGTH=" + utils::toString(req.getBody().size()));
-
-	// std::map<std::string, std::string>::const_iterator headerIt;
-	// for (headerIt = req.getHeaders().begin(); headerIt != req.getHeaders().end(); ++headerIt) {
-	// 	if (headerIt->first == "Content-Type" || headerIt->first == "Content-Length")
-	// 		continue;
-	// 	std::string headerName = "HTTP_" + headerIt->first;
-	// 	for (size_t i = 0; i < headerName.size(); ++i) {
-	// 		if (headerName[i] == '-')
-	// 			headerName[i] = '_';
-	// 		else
-	// 			headerName[i] = std::toupper(headerName[i]);
-	// 	}
-	// 	env.push_back(headerName + "=" + headerIt->second);
-	// }
-
-	// return env;
 }
 
 static char** mapToEnvp(const std::map<std::string, std::string>& env) {
@@ -164,71 +101,6 @@ static char** mapToEnvp(const std::map<std::string, std::string>& env) {
 	return envp;
 }
 
-// std::string executeCgi(const std::string& filePath, const std::map<std::string, std::string>& env) {
-// 	int pipefd[2];
-// 	if (pipe(pipefd) == -1) {
-// 		throw std::runtime_error("Failed to create pipe");
-// 	}
-// 	pid_t pid = fork();
-// 	if (pid == -1) {
-// 		throw std::runtime_error("Failed to fork process");
-// 	} else if (pid == 0) {
-// 		close(pipefd[0]);
-// 		dup2(pipefd[1], STDOUT_FILENO);
-// 		close(pipefd[1]);
-
-// 		char* argv[2];
-// 		argv[0] = const_cast<char*>(filePath.c_str());
-// 		argv[1] = NULL;
-
-// 		char** envp = mapToEnvp(env);
-
-// 		execve(argv[0], argv, envp);
-// 		exit(1);
-// 	} else {
-// 		close(pipefd[1]);
-
-// 		std::string output;
-// 		char buffer[4096];
-// 		ssize_t bytesRead;
-
-// 		while ((bytesRead = read(pipefd[0], buffer, sizeof(buffer))) > 0) {
-// 			output.append(buffer, bytesRead);
-// 		}
-
-// 		close(pipefd[0]);
-
-// 		int status;
-// 		waitpid(pid, &status, 0);
-
-// 		return output;
-// 	}
-// }
-
-// void cgiRun(const Location& data, const HTTPRequest& request, HTTPResponse& response) {
-// 	std::string filepath;
-// 	std::map<std::string, std::string> env;
-
-// 	if (request.getPath() == data.getPath()) {
-// 		filepath = data.getRoot() + "/" + data.getIndex();
-// 	} else {
-// 		filepath = data.getRoot() + request.getPath();
-// 	}
-
-// 	std::cout << filepath << std::endl;
-
-// 	env = buildEnv(*data.getParent(), request, filepath);
-
-// 	std::string cgiOutput;
-// 	cgiOutput = executeCgi(filepath, env);
-// 	//parse cgiOutput to set response body and headers
-	
-// }
-
-// bool cgiRun(const ServerConfig& data, const LocationConfig& location, const HTTPRequest& request) {
-// 	std::vector<std::string> env = buildEnv(data, location, request);
-	
-// }
 static pid_t executeCgi(Connection& c, std::string& filePath) {
 	int pipeIn[2];
 	int pipeOut[2];
@@ -253,7 +125,6 @@ static pid_t executeCgi(Connection& c, std::string& filePath) {
 	} else if (pid == 0) {
 		dup2(pipeIn[0], STDIN_FILENO);
 		dup2(pipeOut[1], STDOUT_FILENO);
-		// Logger::debug("child process started for CGI execution");
 
 		close(pipeIn[0]);
 		close(pipeIn[1]);
@@ -269,7 +140,6 @@ static pid_t executeCgi(Connection& c, std::string& filePath) {
 		argv[0] = const_cast<char*>(filePath.c_str());
 		argv[1] = NULL;
 
-		// Logger::debug("executing CGI script: " + filePath);
 		execve(filePath.c_str(), argv, mapToEnvp(env));
 		Logger::error("Failed to execute CGI script: " + filePath);
 		perror("debug :");
@@ -282,7 +152,7 @@ static pid_t executeCgi(Connection& c, std::string& filePath) {
 			close(pipeIn[1]);
 			close(pipeOut[0]);
 			kill(pid, SIGKILL);
-			// waitpid(pid, NULL, 0);
+			waitpid(pid, NULL, 0);
 			return -1;
 		}
 
@@ -290,7 +160,7 @@ static pid_t executeCgi(Connection& c, std::string& filePath) {
 			close(pipeIn[1]);
 			close(pipeOut[0]);
 			kill(pid, SIGKILL);
-			// waitpid(pid, NULL, 0);
+			waitpid(pid, NULL, 0);
 			return -1;
 		}
 		c.cgiPid = pid;
