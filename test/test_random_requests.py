@@ -75,7 +75,7 @@ def test_not_found():
 def test_forbidden():
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.connect(('127.0.0.1', 8080))
-	req = b"GET /naber/naber HTTP/1.1\r\n\r\n"
+	req = b"GET /../noperm.html HTTP/1.1\r\n\r\n"
 	s.sendall(req)
 	sleep(0.1)
 	res = s.recv(4096)
@@ -89,11 +89,11 @@ def test_forbidden():
 def test_method_not_allowed():
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.connect(('127.0.0.1', 8080))
-	req = b"OPTIONS / HTTP/1.1\r\n\r\n"
+	req = b"DELETE / HTTP/1.1\r\n\r\n"
 	s.sendall(req)
 	sleep(0.1)
 	res = s.recv(4096)
-	if "403" in res.decode('utf-8'):
+	if "405" in res.decode('utf-8'):
 		print("PASSED!")
 	else:
 		print("Received response:")
