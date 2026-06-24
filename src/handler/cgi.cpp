@@ -254,7 +254,11 @@ void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
 // ama biz cgi icin ayri read fln kullanmaktansa ayni fonksiyonlari kullaniyoruz
 HTTPResponse RequestHandler::createCgi(Connection& c) {
 	c.lastActivity = std::time(NULL);
-	c.req.parse(c.readBuff, c.headerLength);
+	if (!c.req.parseCgiHead(c.readBuff, c.headerLength)) {
+		if (c.req.getVersion() != "1.0" && c.req.getVersion() != "1.1")
+			return buildErrorResponse(*c.config, 505);
+		return buildErrorResponse(*c.config, 400);
+	}
 	c.readBuff.erase(0, c.headerLength);
 	c.loc = matchLocation(*c.config, c.req.getPath());
 

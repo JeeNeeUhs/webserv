@@ -142,6 +142,40 @@ const std::vector<std::string> HTTPRequest::getHeaderValues(const std::string& k
 	return utils::split(getHeader(key), ';');
 }
 
+bool HTTPRequest::parseCgiHead(const std::string& rawRequest, size_t headerEnd) {
+	_method.clear();
+	_path.clear();
+	_query.clear();
+	_protocol.clear();
+	_version.clear();
+	_queries.clear();
+	_headers.clear();
+	_body.clear();
+
+	if (headerEnd < 4 || headerEnd > rawRequest.size())
+		return false;
+
+	size_t headerBlockEnd = headerEnd - 4;
+	size_t lineEnd = rawRequest.find("\r\n");
+
+	if (lineEnd == std::string::npos || lineEnd > headerBlockEnd)
+		return false;
+
+	if (!HTTPParser::parseRequestLine(rawRequest.substr(0, lineEnd),
+		_method, _query, _path, _protocol, _version))
+		return false;
+
+	std::string rawHeaders = rawRequest.substr(lineEnd + 2, headerBlockEnd - (lineEnd + 2) + 2);
+	if (!HTTPParser::parseHeaders(rawHeaders, _headers))
+		return false;
+
+	if (!_query.empty())
+		parseQueryString(_query);
+
+	return validate();
+}
+
+
 bool HTTPRequest::parse(const std::string& rawRequest, size_t headerEnd) {
 	_method.clear();
 	_path.clear();

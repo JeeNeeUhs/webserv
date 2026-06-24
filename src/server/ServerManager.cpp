@@ -317,8 +317,11 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 	}
 
 	if (c.state == READING_BODY) {
-		if (!c.req.parse(c.readBuff, c.headerLength))
+		if (!c.req.parse(c.readBuff, c.headerLength)) {
+			if (c.req.getVersion() != "1.0" && c.req.getVersion() != "1.1")
+				return setErrorResponse(pfd, c, 505);
 			return setErrorResponse(pfd, c, 400);
+		}
 
 		c.res = RequestHandler::handle(*c.config, c.req);
 		if (c.res.isFileBody()) {
