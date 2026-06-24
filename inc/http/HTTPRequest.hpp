@@ -40,7 +40,7 @@ class HTTPRequest {
 		std::string getUnparsedRequest(void) const;
 
 		bool parse(const std::string& rawRequest, size_t headerEnd);
-		bool HTTPRequest::parseCgiHead(const std::string& rawRequest, size_t headerEnd);
+		bool parseCgiHead(const std::string& rawRequest, size_t headerEnd);
 };
 
 /*
