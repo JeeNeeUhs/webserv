@@ -1,35 +1,133 @@
 #!/usr/bin/env python3
-import os, sys, json, time
+
+import os
+import sys
+import json
+import time
 from urllib.parse import unquote_plus
 
-n = int(os.environ.get("CONTENT_LENGTH") or 0)
-F = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat.json")
-W = sys.stdout.buffer.write
+CHAT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat.json")
+MAX_MESSAGES = 200
 
-def msgs():
-    try: return json.load(open(F, encoding="utf-8"))
-    except: return []
+write = sys.stdout.buffer.write
 
-if os.environ.get("REQUEST_METHOD") == "POST":
-    body = sys.stdin.buffer.read(n).decode("utf-8", "replace")
-    d = dict(p.split("=", 1) for p in body.split("&") if "=" in p)
-    nick = unquote_plus(d.get("nick", "")).strip()[:24]
-    text = unquote_plus(d.get("text", "")).strip()[:500]
-    m = msgs()
-    if nick and text:
-        m.append({"nick": nick, "text": text, "time": time.strftime("%H:%M:%S")})
-        json.dump(m[-200:], open(F, "w", encoding="utf-8"), ensure_ascii=False)
-    W(b"Content-Type: application/json; charset=utf-8\r\n\r\n")
-    W(json.dumps(msgs(), ensure_ascii=False).encode("utf-8"))
-else:
-    W(b"Content-Type: text/html; charset=utf-8\r\n\r\n")
-    W("""<!doctype html><meta charset=utf-8><title>chat</title>
-<input id=nick placeholder=nick> <input id=t placeholder=mesaj>
-<button onclick=send()>gonder</button>
-<div id=box></div>
+
+def load_messages():
+	try:
+		with open(CHAT_FILE, encoding="utf-8") as f:
+			return json.load(f)
+	except (OSError, ValueError):
+		return []
+
+
+def save_messages(messages):
+	with open(CHAT_FILE, "w", encoding="utf-8") as f:
+		json.dump(messages[-MAX_MESSAGES:], f, ensure_ascii=False)
+
+
+def parse_post_body():
+	try:
+		length = int(os.environ.get("CONTENT_LENGTH") or 0)
+	except ValueError:
+		length = 0
+	if length <= 0:
+		return {}
+	body = sys.stdin.buffer.read(length).decode("utf-8", "replace")
+	fields = {}
+	for pair in body.split("&"):
+		if "=" in pair:
+			key, value = pair.split("=", 1)
+			fields[key] = unquote_plus(value)
+	return fields
+
+
+def send_header(content_type):
+	write(("Content-Type: %s; charset=utf-8\r\n\r\n" % content_type).encode("utf-8"))
+
+
+def handle_post():
+	fields = parse_post_body()
+	nick = fields.get("nick", "").strip()[:24]
+	text = fields.get("text", "").strip()[:500]
+
+	messages = load_messages()
+	if nick and text:
+		messages.append({
+			"nick": nick,
+			"text": text,
+			"time": time.strftime("%H:%M:%S"),
+		})
+		save_messages(messages)
+		messages = load_messages()
+
+	send_header("application/json")
+	write(json.dumps(messages, ensure_ascii=False).encode("utf-8"))
+
+
+def handle_get():
+	send_header("text/html")
+	write(PAGE.encode("utf-8"))
+
+
+PAGE = """<!doctype html>
+<meta charset="utf-8">
+<title>chat</title>
+
+<input id="nick" placeholder="username">
+<input id="text" placeholder="message">
+<button onclick="send()">send</button>
+
+refresh:
+<select id="interval">
+  <option value="1">1 sn</option>
+  <option value="2">2 sn</option>
+  <option value="3">3 sn</option>
+  <option value="4">4 sn</option>
+  <option value="5">5 sn</option>
+  <option value="6">6 sn</option>
+  <option value="7">7 sn</option>
+  <option value="8">8 sn</option>
+  <option value="9">9 sn</option>
+  <option value="10">10 sn</option>
+</select>
+
+<div id="box"></div>
+
 <script>
-function load(b){fetch("chat.py",{method:"POST",body:b||""}).then(r=>r.json()).then(m=>{
-box.innerHTML=m.map(x=>x.time+" <b>"+x.nick+":</b> "+x.text).join("<br>")})}
-function send(){load("nick="+encodeURIComponent(nick.value)+"&text="+encodeURIComponent(t.value));t.value=""}
-load();setInterval(load,1000);
-</script>""".encode("utf-8"))
+var timer = null;
+
+function load(body) {
+  fetch("chat.py", { method: "POST", body: body || "" })
+	.then(function (r) { return r.json(); })
+	.then(function (messages) {
+	  box.innerHTML = messages.map(function (m) {
+		return m.time + " <b>" + m.nick + ":</b> " + m.text;
+	  }).join("<br>");
+	});
+}
+
+function send() {
+  var body = "nick=" + encodeURIComponent(nick.value) +
+			 "&text=" + encodeURIComponent(text.value);
+  load(body);
+  text.value = "";
+}
+
+function startPolling() {
+  if (timer) clearInterval(timer);
+  var seconds = parseInt(interval.value, 10);
+  timer = setInterval(load, seconds * 1000);
+}
+
+interval.onchange = startPolling;
+
+load();
+startPolling();
+</script>
+"""
+
+if __name__ == "__main__":
+	if os.environ.get("REQUEST_METHOD") == "POST":
+		handle_post()
+	else:
+		handle_get()
