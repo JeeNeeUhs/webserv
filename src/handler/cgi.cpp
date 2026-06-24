@@ -286,9 +286,11 @@ HTTPResponse RequestHandler::createCgi(Connection& c) {
 		filePath = c.loc->root + c.req.getPath();
 	}
 
-	if (!(access(filePath.c_str(), X_OK) == -1)) {
+	if (!(access(filePath.c_str(), X_OK) == -1))
 		executeCgi(c, filePath);
-	}
+	else
+		return buildErrorResponse(*c.config, 404);
+
 	if (c.cgiPid < 0) {
 		Logger::error("Failed to execute CGI script for path " + c.req.getPath());
 		c.res = buildErrorResponse(*c.config, 500);

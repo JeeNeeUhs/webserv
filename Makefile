@@ -2,7 +2,7 @@ NAME		= webserv
 
 BUILD_DIR	= build
 
-VPATH		= src:src/utils:src/config:src/server:src/http:src/handler:test/unit
+VPATH		= src:src/utils:src/config:src/server:src/http:src/handler
 
 SRCS		= main.cpp \
 			utils.cpp Logger.cpp \
@@ -40,8 +40,7 @@ clean:
 
 fclean: clean
 	$(RM) $(NAME)
-	$(RM) $(TEST_NAME)
 
 re: fclean all
 
-.PHONY: all test-unit test-stress clean fclean re
+.PHONY: all test-stress clean fclean re
