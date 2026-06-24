@@ -1,11 +1,4 @@
 #!/bin/bash
-# envtest - verify ymawky sets cgi env vars per rfc 3875
-#
-# install:
-#   1. save as www/cgi-bin/envtest (no extension)
-#   2. chmod +x www/cgi-bin/envtest
-#   3. visit http://localhost:PORT/cgi-bin/envtest
-#   4. submit the form to test CONTENT_TYPE/CONTENT_LENGTH
 
 html_escape() {
     local s="$1"
@@ -209,7 +202,6 @@ printf '<p class="legend"><span class="ok">✓ ok</span><span class="warn">⚠ s
 
 printf '<div class="layout">\n'
 
-# ─── LEFT COLUMN: required ───
 printf '<section class="col">\n'
 printf '<h2>required</h2>\n'
 printf '<table><thead><tr><th class="i"></th><th class="v">variable</th><th class="e">expected</th><th class="a">actual</th></tr></thead><tbody>\n'
@@ -232,7 +224,6 @@ fi
 printf '</tbody></table>\n'
 printf '</section>\n'
 
-# ─── RIGHT COLUMN: conditional + optional stacked ───
 printf '<div class="col-stack">\n'
 
 printf '<section>\n'
@@ -283,8 +274,8 @@ fi
 printf '</tbody></table>\n'
 printf '</section>\n'
 
-printf '</div>\n'   # close .col-stack
-printf '</div>\n'   # close .layout
+printf '</div>\n'
+printf '</div>\n'
 
 cat <<EOF
 <div class="divider">~ ~ ~</div>
@@ -304,7 +295,6 @@ done
 printf '</pre>\n'
 
 cat <<'EOF'
-<div class="footer">ymawky :: hand-rolled aarch64 :: envtest v0.5</div>
 </div>
 </body>
 </html>

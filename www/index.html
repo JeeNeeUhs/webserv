@@ -1,11 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>webserv</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet">
+	<style>
+		body {
+			background-color: #edb86d;
+			font-family: "Comic Neue", cursive;
+		}
+
+		ul {
+			margin: 0;
+		}
+
+		@keyframes wobble {
+			0%   { transform: scale(1) rotate(-5deg); }
+			25%  { transform: scale(1.15) rotate(5deg); }
+			50%  { transform: scale(1) rotate(-5deg); }
+			75%  { transform: scale(1.15) rotate(5deg); }
+			100% { transform: scale(1) rotate(-5deg); }
+		}
+
+		.animText {
+			margin-left: 5px;
+			margin-right: 5px;
+			display: inline-block;
+			transform-origin: center center;
+			animation: wobble 1s infinite ease-in-out;
+			color: yellow;
+			text-shadow: 
+				-1px -1px 0 #000,  
+				1px -1px 0 #000,
+				-1px  1px 0 #000,
+				1px  1px 0 #000;
+			font-size: 13px;
+			position: absolute;
+			top: 25px;
+			right: 0px;
+		}
+
+		.ahekinci {
+			background-color: #0d1116;
+			color: #ff7b72;
+			font-family: monospace;
+			padding: 2px;
+		}
+
+		.ebabaogl {
+			background-color: #282828;
+			color: #b8b734;
+			font-family: monospace;
+			padding: 2px;
+		}
+	</style>
 </head>
 <body>
-    <h1 style="color:red">hello world</h1>
+	<div>
+		<div style="position: relative; width: fit-content; padding-right: 20px; font-size: 18px;">
+			<h1>welcome to the <span style="font-family: fantasy;">webserv</span></h1>
+			<div class="animText"></div>
+		</div>
+		<p>made by <span class="ahekinci">ahekinci</span> and <span class="ebabaogl">ebabaogl</span> with <del>patience</del> and <i>care</i>!!!!</p>
+		<p>you know what is RFC 1945?? i dont know either...</p>
+		<p style="margin: 0;">quick links:</p>
+		<ul>
+			<li><a href="/doom">doom demo</a></li>
+			<li><a href="/uploads">uploaded files</a> (you can upload files too!!)</li>
+			<li><a href="/static">static files</a></li>
+			<li><a href="/cgi-bin/music.py">random wave </a></li>
+		</ul>
+		<p>your session id: <span id="cookie"></span></p>
+	</div>
+
+	<script src="/static/index.js"></script>
 </body>
 </html>
