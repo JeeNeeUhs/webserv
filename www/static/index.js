@@ -7,8 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const phrases = [
 		"hello world",
 		"wuck febserv",
-		"larei was here",
-		"ZGVoYW95dW4=",
+		"sata andagi",
 		"did you try -d flag?"
 	]
 
