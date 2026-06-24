@@ -141,7 +141,7 @@ HTTPResponse RequestHandler::validateUploadRequest(Connection& c) {
 		return res;
 	}
 
-	if (!isMethodAllowed(*c.loc, c.req.getMethod()))
+	if (!isMethodAllowed(*c.loc, c.req.getMethod()) || c.req.getMethod() != "POST")
 		return buildErrorResponse(*c.loc, 405);
 
 	std::vector<std::string>::const_iterator it =

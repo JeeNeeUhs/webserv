@@ -240,15 +240,15 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		std::string path;
 		std::string trash;
 		HTTPParser::parseRequestLine(c.readBuff.substr(0, c.readBuff.find("\r\n")), trash, trash, path, trash, trash);
-		if (RequestHandler::isCgiRequest(*RequestHandler::matchLocation(*c.config, path), path)) {
+		if (RequestHandler::isCgiRequest(*RequestHandler::matchLocation(*c.config, path), path))
 			c.state = CGI_REQUEST;
-		} else {
-		std::vector<std::string> ct = utils::split(HTTPParser::peekHeader(c.readBuff, "Content-Type"), ';');
-		std::vector<std::string>::iterator it = std::find(ct.begin(), ct.end(), "multipart/form-data");
-		if (it != ct.end())
-			c.state = STORING_BODY;
-		else
-			c.state = READING_BODY;
+		else {
+			std::vector<std::string> ct = utils::split(HTTPParser::peekHeader(c.readBuff, "Content-Type"), ';');
+			std::vector<std::string>::iterator it = std::find(ct.begin(), ct.end(), "multipart/form-data");
+			if (it != ct.end())
+				c.state = STORING_BODY;
+			else
+				c.state = READING_BODY;
 		}
 	}
 
@@ -256,7 +256,9 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		if (c.cgiPid == -1 && c.cgiReadFd == -1 && c.cgiWriteFd == -1) {
 			c.res = RequestHandler::createCgi(c);
 			if (c.res.getStatusCode() != 0) {
-				pfd.events = POLLOUT;	
+				c.writeBuff = c.res.serialize();
+				c.state = CONN_DONE;
+				pfd.events = POLLOUT;
 				return true;
 			}
 			_cgiWriteFds[c.cgiWriteFd] = &c;
