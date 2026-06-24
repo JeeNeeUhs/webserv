@@ -7,7 +7,7 @@ def test_large_body():
 	body_size = 5 * 1024 * 1024 * 1024
 
 	print("connected to server, sending header...")
-	req = b"POST / HTTP/1.0\r\n"
+	req = b"POST /cgi-bin/cat.sh HTTP/1.0\r\n"
 	req += f"Content-Length: {body_size}\r\n".encode('utf-8')
 	req += b"\r\n"
 	s.sendall(req)

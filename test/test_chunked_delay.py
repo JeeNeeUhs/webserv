@@ -6,7 +6,7 @@ def test_chunked_delay():
 	s.connect(('127.0.0.1', 8080))
 
 	print("connected to server, sending header...")
-	req = b"POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
+	req = b"POST /cgi-bin/cat.sh HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
 	s.sendall(req)
 
 	time.sleep(1)
