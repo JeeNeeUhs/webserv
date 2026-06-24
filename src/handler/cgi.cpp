@@ -66,8 +66,11 @@ static std::map<std::string, std::string> buildEnv(const ServerConfig& data, con
 	env["REMOTE_ADDR"] = utils::toString(data.listens[0].first);
 	env["REMOTE_HOST"] = utils::toString(data.listens[0].first);
 	env["SERVER_NAME"] = utils::toString(data.listens[0].first);
-	env["CONTENT_TYPE"] = req.getHeader("Content-Type");
-	env["CONTENT_LENGTH"] = req.getHeader("Content-Length").c_str();
+
+	if (!req.getHeader("Content-Type").empty())
+		env["CONTENT_TYPE"] = req.getHeader("Content-Type").c_str();
+	if (!req.getHeader("Content-Length").empty())
+		env["CONTENT_LENGTH"] = req.getHeader("Content-Length").c_str();
 
 	std::map<std::string, std::string>::const_iterator headerIt;
 	for (headerIt = req.getHeaders().begin(); headerIt != req.getHeaders().end(); ++headerIt) {
@@ -245,6 +248,15 @@ void RequestHandler::cgiDone(Connection& c, pollfd_t& pfd) {
 	return;
 }
 
+static bool isMethodAllowed(const LocationConfig& loc, const std::string& method) {
+	for (size_t i = 0; i < loc.methods.size(); ++i) {
+		if (loc.methods[i] == method)
+			return true;
+	}
+
+	return false;
+}
+
 // cgi sisteme ful entegre olarak calisir
 // asagida gormus oldugunuz fonksiyonu sadece cgi baslatmak icin procesess i olusturmak icin kullaniyoruz
 // diger butun takipler pollda
@@ -261,6 +273,8 @@ HTTPResponse RequestHandler::createCgi(Connection& c) {
 	}
 	c.readBuff.erase(0, c.headerLength);
 	c.loc = matchLocation(*c.config, c.req.getPath());
+	if (!isMethodAllowed(*c.loc, c.req.getMethod()))
+		return buildErrorResponse(*c.config, 405);
 
 	std::string filePath;
 	if (utils::trimCharset(c.req.getPath(), "/") == utils::trimCharset(c.loc->path, "/")) {
