@@ -38,13 +38,15 @@ The bonus part is included:
 - A C++ compiler supporting `-std=c++98`
 - `make`
 - A CGI interpreter if you want to test the CGI features
+- `siege` for stress test
 
 ### Build
 ```sh
-make        # builds the webserv binary
-make clean  # removes object files
-make fclean # removes object files and the binary
-make re     # fclean + all
+make              # builds the webserv binary
+make test-stress  # tests with siege tool
+make clean        # removes object files
+make fclean       # removes object files and the binary
+make re           # fclean + all
 ```
  
 ### Run

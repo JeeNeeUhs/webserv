@@ -134,7 +134,12 @@ static pid_t executeCgi(Connection& c, std::string& filePath) {
 		close(pipeOut[0]);
 		close(pipeOut[1]);
 
-		if (chdir(c.loc->root.c_str()) == -1)
+		std::string dir = c.loc->root;
+		std::string::size_type pos = filePath.rfind('/');
+		if (pos != std::string::npos)
+			dir = filePath.substr(0, pos);
+
+		if (chdir(dir.c_str()) == -1)
 			exit(1);
 
 		std::map<std::string, std::string> env = buildEnv(*c.config, *c.loc, c.req);
@@ -275,6 +280,16 @@ HTTPResponse RequestHandler::createCgi(Connection& c) {
 	c.loc = matchLocation(*c.config, c.req.getPath());
 	if (!isMethodAllowed(*c.loc, c.req.getMethod()))
 		return buildErrorResponse(*c.config, 405);
+	
+	if (c.req.getMethod() == "POST" && c.req.getHeader("Transfer-Encoding") != "chunked") {
+		try {
+			size_t cLen = utils::parseNum<size_t>(c.req.getHeader("Content-Length"));
+			if (cLen > c.config->clientMaxBodySize)
+				return buildErrorResponse(*c.config, 413);
+		} catch (...) {
+			return buildErrorResponse(*c.config, 500);
+		}
+	}
 
 	std::string filePath;
 	if (utils::trimCharset(c.req.getPath(), "/") == utils::trimCharset(c.loc->path, "/")) {

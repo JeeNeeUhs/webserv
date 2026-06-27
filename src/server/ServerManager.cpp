@@ -233,6 +233,7 @@ bool ServerManager::processBuffer(pollfd_t& pfd, Connection& c) {
 		std::size_t headerEnd = HTTPParser::findHeaderEnd(c.readBuff);
 		if (headerEnd == std::string::npos)
 			return true;
+		
 		c.headerLength = headerEnd;
 
 		_sessionHandler.getOrCreateSession(c);
@@ -352,13 +353,9 @@ bool ServerManager::readFromClient(pollfd_t& pfd, Connection& c) {
 	char chunk[RECV_CHUNK];
 
 	int bytes = recv(pfd.fd, chunk, sizeof(chunk), 0);
-	if (bytes > 0) {
-		size_t buffSize = c.readBuff.size() + bytes;
-		if (buffSize > c.config->clientMaxBodySize)
-			return processBuffer(pfd, c);
-
+	if (bytes > 0)
 		c.readBuff.append(chunk, bytes);
-	} else if (bytes == 0) {
+	else if (bytes == 0) {
 		Logger::debug("fd " + utils::toString(pfd.fd) + " closed connection (eof)");
 		if (c.state == STORING_BODY) {
 			c.uploadEof = true;
